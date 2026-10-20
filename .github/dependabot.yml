@@ -8,6 +8,11 @@ updates:
   - package-ecosystem: npm
     directory: /web
     schedule: { interval: weekly }
+    ignore:
+      # svelte-check supports TypeScript 5 and 6 only (peer dependency), so
+      # TypeScript 7 cannot be installed yet. Drop this once svelte-check allows it.
+      - dependency-name: typescript
+        versions: [">=7"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
