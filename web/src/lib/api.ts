@@ -83,6 +83,34 @@ export interface CA {
   created_at: string;
   key_held: boolean;
 }
+export type Profile = 'server' | 'client' | 'both';
+export interface Cert {
+  id: string;
+  ca_id: string;
+  serial: string;
+  common_name: string;
+  sans: string[];
+  profile: Profile;
+  not_before: string;
+  not_after: string;
+  key_generated: boolean;
+  created_at: string;
+}
+export interface NewCert {
+  common_name: string;
+  dns_names: string[];
+  ip_addresses: string[];
+  profile: Profile;
+  validity_days: number;
+  key_algo?: KeyAlgo;
+  csr_pem?: string;
+}
+export interface Issued {
+  id: string;
+  certificate_pem: string;
+  private_key_pem?: string;
+  chain_pem: string;
+}
 export type KeyAlgo = 'ecdsa-p256' | 'ecdsa-p384' | 'rsa-3072' | 'rsa-4096';
 export interface NewCA {
   kind: 'root' | 'intermediate';
@@ -109,9 +137,14 @@ export const api = {
 
   listCAs: () => request<CA[]>('GET', '/cas'),
   createCA: (b: NewCA) => request<CA>('POST', '/cas', b),
+
+  listCerts: (caId?: string) => request<Cert[]>('GET', '/certificates' + (caId ? `?ca_id=${encodeURIComponent(caId)}` : '')),
+  issueCert: (caId: string, b: NewCert) => request<Issued>('POST', `/cas/${encodeURIComponent(caId)}/certificates`, b),
 };
 
 export const downloadURL = {
+  certPEM: (id: string) => `${base}/certificates/${encodeURIComponent(id)}/pem`,
+  certFullchain: (id: string) => `${base}/certificates/${encodeURIComponent(id)}/fullchain`,
   caCert: (id: string) => `${base}/cas/${encodeURIComponent(id)}/cert`,
   caChain: (id: string) => `${base}/cas/${encodeURIComponent(id)}/chain`,
 };

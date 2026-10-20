@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import Alert from '../components/Alert.svelte';
+  import Dialog from '../components/Dialog.svelte';
   import Field from '../components/Field.svelte';
   import { api, type CA, type KeyAlgo } from '../lib/api';
   import { errorMessage } from '../lib/errors';
@@ -8,7 +9,6 @@
 
   let { roots, onCreated, onClose }: { roots: CA[]; onCreated: () => void; onClose: () => void } = $props();
 
-  let dialog: HTMLDialogElement;
   // The dialog is created when opened, so the initial snapshot of roots is what we want.
   let kind = $state<'root' | 'intermediate'>(untrack(() => (roots.length === 0 ? 'root' : 'intermediate')));
   let parentId = $state(untrack(() => roots.find((r) => r.key_held)?.id ?? ''));
@@ -26,10 +26,6 @@
   $effect(() => {
     algo = kind === 'root' ? 'ecdsa-p384' : 'ecdsa-p256';
     years = defaultYears[kind];
-  });
-
-  $effect(() => {
-    dialog.showModal();
   });
 
   async function submit(e: SubmitEvent) {
@@ -59,13 +55,8 @@
   }
 </script>
 
-<dialog
-  bind:this={dialog}
-  onclose={onClose}
-  class="m-auto w-full max-w-lg rounded-xl border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
->
-  <form class="flex flex-col gap-4 p-6" onsubmit={submit}>
-    <h2 class="text-lg font-semibold">{t('cas.form.title')}</h2>
+<Dialog title={t('cas.form.title')} {onClose}>
+  <form class="flex flex-col gap-4" onsubmit={submit}>
 
     <div>
       <label class="label" for="ca-kind">{t('cas.form.kind')}</label>
@@ -108,8 +99,8 @@
     {#if error}<Alert>{error}</Alert>{/if}
 
     <div class="flex justify-end gap-2">
-      <button type="button" class="btn-secondary" onclick={() => dialog.close()}>{t('common.cancel')}</button>
+      <button type="button" class="btn-secondary" onclick={onClose}>{t('common.cancel')}</button>
       <button class="btn-primary" disabled={busy}>{t('common.create')}</button>
     </div>
   </form>
-</dialog>
+</Dialog>

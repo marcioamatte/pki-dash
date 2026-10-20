@@ -7,10 +7,12 @@
   import { formatDate, t } from '../lib/i18n.svelte';
   import { isAdmin, session } from '../lib/session.svelte';
   import CreateCA from './CreateCA.svelte';
+  import TrustDialog from './TrustDialog.svelte';
 
   let cas = $state<CA[] | null>(null);
   let error = $state('');
   let creating = $state(false);
+  let trusting = $state<CA | null>(null);
 
   async function load() {
     try {
@@ -100,6 +102,9 @@
               {#if ca.kind === 'intermediate'}
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
                 <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.caChain(ca.id)} download>{t('cas.download.chain')}</a>
+              {:else}
+                <span class="text-slate-300 dark:text-slate-700"> · </span>
+                <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (trusting = ca)}>{t('trust.button')}</button>
               {/if}
             </td>
           </tr>
@@ -107,6 +112,10 @@
       </tbody>
     </table>
   </div>
+{/if}
+
+{#if trusting}
+  <TrustDialog ca={trusting} onClose={() => (trusting = null)} />
 {/if}
 
 {#if creating}
