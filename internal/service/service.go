@@ -413,3 +413,41 @@ func parseCert(certPEM []byte) (*x509.Certificate, error) {
 	}
 	return x509.ParseCertificate(block.Bytes)
 }
+
+// Audit returns up to limit audit entries, newest first.
+func (s *Service) Audit(ctx context.Context, limit int) ([]store.AuditEntry, error) {
+	return s.st.Audit(ctx, limit)
+}
+
+// VerifyAudit checks the integrity of the audit log's hash chain.
+func (s *Service) VerifyAudit(ctx context.Context) error { return s.st.VerifyAudit(ctx) }
+
+// GetCertificate returns one issued certificate.
+func (s *Service) GetCertificate(ctx context.Context, id string) (store.Certificate, error) {
+	return s.st.GetCertificate(ctx, id)
+}
+
+// VerifyPassphrase checks the master passphrase without changing the vault's
+// state. Use it to re-authenticate before the most dangerous operations
+// (exporting or removing a key, changing the passphrase), so that a stolen
+// login session alone is not enough. Failures are audited.
+func (s *Service) VerifyPassphrase(ctx context.Context, actor, passphrase string) error {
+	raw, err := s.st.VaultHeader(ctx)
+	if errors.Is(err, store.ErrNotFound) {
+		return ErrNotInitialized
+	}
+	if err != nil {
+		return err
+	}
+	h, err := vault.ParseHeader(raw)
+	if err != nil {
+		return err
+	}
+	v, err := vault.Unlock(h, passphrase)
+	if err != nil {
+		_ = s.st.AuditEvent(ctx, actor, "vault.reauth_failed", "vault", "")
+		return err
+	}
+	v.Lock()
+	return nil
+}

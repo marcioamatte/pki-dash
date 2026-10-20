@@ -4,7 +4,7 @@ A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs 
 
 > Translations: [pt-BR](README_pt-BR.md)
 
-> **Status: early design phase. Nothing is usable yet.**
+> **Status: early development. The backend and JSON API work; there is no web UI yet. Not ready for real use.**
 
 > **Disclaimer:** pki-dash is meant for internal environments such as homelabs, labs and test machines. It is **not** intended for public PKI or for settings where a CA compromise would have critical impact. It does not replace an HSM, a formal key ceremony or a commercial CA.
 
@@ -13,6 +13,15 @@ A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs 
 - Root → intermediate → service certificate hierarchy, with the Root kept offline.
 - Friendly UI for issuing certificates and distributing trust to hosts.
 - Security first: CA keys encrypted at rest, mandatory authentication, multi-user roles, audit log, OIDC later.
+
+## Running it (development)
+
+```bash
+CGO_ENABLED=0 go build -o pki-dash ./cmd/pki-dash
+./pki-dash -tls-self-signed          # or -tls-cert/-tls-key, or -insecure-http for local development
+```
+
+The server refuses to start unless you choose how it is served. On first run it prints a one-time **setup token** to its log; use it with `POST /api/v1/setup` to create the first admin and the master passphrase. After every restart the vault is locked: unlock it with `POST /api/v1/vault/unlock`, so CA keys never sit decrypted on disk.
 
 ## Documentation
 
