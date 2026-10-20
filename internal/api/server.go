@@ -11,6 +11,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -33,6 +34,8 @@ type Options struct {
 	// SetupToken, when set, must accompany the first-run setup request. It
 	// stops whoever reaches a fresh instance first from claiming it.
 	SetupToken string
+	// UI is the built frontend, served at / and /assets/. Nil serves the API only.
+	UI fs.FS
 	// Now overrides the clock, for tests.
 	Now func() time.Time
 }
@@ -44,6 +47,7 @@ type Server struct {
 	log        *slog.Logger
 	secure     bool
 	setupToken string
+	ui         fs.FS
 	general    *limiter
 	strict     *limiter // login, passphrase and other credential-guessing targets
 }
@@ -57,7 +61,7 @@ func New(o Options) *Server {
 		o.Now = time.Now
 	}
 	return &Server{
-		svc: o.Service, auth: o.Auth, log: o.Logger, secure: o.SecureCookies, setupToken: o.SetupToken,
+		svc: o.Service, auth: o.Auth, log: o.Logger, secure: o.SecureCookies, setupToken: o.SetupToken, ui: o.UI,
 		general: newLimiter(30, 120, o.Now),   // 30 req/s sustained, bursts of 120
 		strict:  newLimiter(1.0/6, 10, o.Now), // 10 per minute sustained, bursts of 10
 	}
@@ -201,6 +205,7 @@ func (s *Server) wrap(next http.Handler) http.Handler {
 		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		h.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
 		h.Set("X-Frame-Options", "DENY")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
 		if s.secure {
 			h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 		}

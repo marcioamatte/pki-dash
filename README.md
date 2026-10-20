@@ -4,7 +4,7 @@ A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs 
 
 > Translations: [pt-BR](README_pt-BR.md)
 
-> **Status: early development. The backend and JSON API work; there is no web UI yet. Not ready for real use.**
+> **Status: early development. The backend, JSON API and a first web UI (setup, sign-in, vault unlock, creating and listing CAs) work. Certificate issuance and user management screens are still to come. Not ready for real use.**
 
 > **Disclaimer:** pki-dash is meant for internal environments such as homelabs, labs and test machines. It is **not** intended for public PKI or for settings where a CA compromise would have critical impact. It does not replace an HSM, a formal key ceremony or a commercial CA.
 
@@ -17,11 +17,13 @@ A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs 
 ## Running it (development)
 
 ```bash
-CGO_ENABLED=0 go build -o pki-dash ./cmd/pki-dash
-./pki-dash -tls-self-signed          # or -tls-cert/-tls-key, or -insecure-http for local development
+make build                           # builds the web UI (needs Node 20.19+ or 22.12+), then the Go binary into bin/
+./bin/pki-dash -tls-self-signed      # or -tls-cert/-tls-key, or -insecure-http for local development
 ```
 
-The server refuses to start unless you choose how it is served. On first run it prints a one-time **setup token** to its log; use it with `POST /api/v1/setup` to create the first admin and the master passphrase. After every restart the vault is locked: unlock it with `POST /api/v1/vault/unlock`, so CA keys never sit decrypted on disk.
+Then open <https://localhost:8443>.
+
+The server refuses to start unless you choose how it is served. On first run it prints a one-time **setup token** to its log; enter it in the web UI (or send it to `POST /api/v1/setup`) to create the first admin and the master passphrase. After every restart the vault is locked: unlock it from the UI (or `POST /api/v1/vault/unlock`), so CA keys never sit decrypted on disk.
 
 ## Documentation
 

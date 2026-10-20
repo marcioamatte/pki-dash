@@ -28,3 +28,24 @@ go list -deps ./... \
       printf '\n---\n\n## %s %s\n\n' "$path" "$version"
       cat "$lic"
     done
+
+# Frontend packages whose code or banner ends up in the shipped bundle: the
+# Svelte runtime (and the two small modules it imports) and Tailwind's CSS
+# banner. Build-time-only tooling is not redistributed and is not listed.
+# Requires `npm ci` in web/.
+bundled_npm="svelte clsx esm-env tailwindcss"
+for pkg in $bundled_npm; do
+  dir="web/node_modules/$pkg"
+  if [ ! -d "$dir" ]; then
+    echo "ERROR: $dir missing: run 'npm ci' in web/ first" >&2
+    exit 1
+  fi
+  lic=$(find "$dir" -maxdepth 1 -type f \( -iname 'LICENSE*' -o -iname 'COPYING*' \) | sort | head -1)
+  if [ -z "$lic" ]; then
+    echo "ERROR: no license file found for npm package $pkg" >&2
+    exit 1
+  fi
+  version=$(node -p "require('./$dir/package.json').version")
+  printf '\n---\n\n## npm: %s %s\n\n' "$pkg" "$version"
+  cat "$lic"
+done

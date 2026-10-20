@@ -1,0 +1,97 @@
+// English is the source language. Every key here must exist in every other
+// locale: the type of those files is derived from this one, so a missing
+// translation is a compile error.
+export const en = {
+  'app.name': 'pki-dash',
+  'app.disclaimer':
+    'For internal environments only. Not for public PKI or places where a CA compromise would be critical.',
+
+  'common.loading': 'Loading…',
+  'common.cancel': 'Cancel',
+  'common.create': 'Create',
+  'common.close': 'Close',
+  'common.error.generic': 'Something went wrong. Please try again.',
+  'common.error.network': 'Cannot reach the server.',
+  'common.error.rateLimited': 'Too many attempts. Wait a moment and try again.',
+  'common.error.forbidden': 'You are not allowed to do this.',
+  'lang.label': 'Language',
+
+  'role.admin': 'Admin',
+  'role.operator': 'Operator',
+  'role.viewer': 'Viewer',
+
+  'auth.login.title': 'Sign in',
+  'auth.username': 'Username',
+  'auth.password': 'Password',
+  'auth.signIn': 'Sign in',
+  'auth.signOut': 'Sign out',
+  'auth.invalid': 'Invalid username or password.',
+
+  'setup.title': 'First-time setup',
+  'setup.intro': 'Create the first administrator and the master passphrase that protects every CA key.',
+  'setup.token': 'Setup token',
+  'setup.tokenHelp': 'Printed in the server log when it first started.',
+  'setup.username': 'Administrator username',
+  'setup.password': 'Password',
+  'setup.passwordHelp': 'At least 12 characters. It must not contain the username.',
+  'setup.passwordConfirm': 'Confirm password',
+  'setup.passphrase': 'Master passphrase',
+  'setup.passphraseHelp': 'At least 12 characters.',
+  'setup.passphraseConfirm': 'Confirm master passphrase',
+  'setup.passphraseWarning':
+    'This passphrase encrypts every CA private key. There is no recovery: if you lose it, the keys are lost for good.',
+  'setup.submit': 'Complete setup',
+  'setup.mismatch': 'The two entries do not match.',
+  'setup.badToken': 'Invalid setup token.',
+
+  'vault.locked.title': 'The vault is locked',
+  'vault.locked.admin': 'Enter the master passphrase to unlock the CA keys. This is needed after every restart.',
+  'vault.locked.other': 'An administrator must unlock the vault before certificates can be issued.',
+  'vault.passphrase': 'Master passphrase',
+  'vault.unlock': 'Unlock',
+  'vault.invalid': 'Wrong master passphrase.',
+  'vault.uninit.title': 'The vault is not initialised',
+  'vault.uninit.admin': 'Choose a master passphrase to protect the CA keys.',
+  'vault.uninit.other': 'An administrator must initialise the vault first.',
+  'vault.init': 'Initialise vault',
+
+  'nav.cas': 'Certificate authorities',
+
+  'cas.title': 'Certificate authorities',
+  'cas.subtitle': 'A Root signs intermediates, and intermediates issue service certificates.',
+  'cas.empty': 'No certificate authorities yet.',
+  'cas.create': 'New CA',
+  'cas.kind.root': 'Root',
+  'cas.kind.intermediate': 'Intermediate',
+  'cas.col.name': 'Name',
+  'cas.col.type': 'Type',
+  'cas.col.validity': 'Valid until',
+  'cas.col.status': 'Key',
+  'cas.col.download': 'Download',
+  'cas.keyHeld': 'Held by the service',
+  'cas.keyOffline': 'Offline',
+  'cas.download.cert': 'Certificate',
+  'cas.download.chain': 'Chain',
+  'cas.expired': 'Expired',
+
+  'cas.form.title': 'New certificate authority',
+  'cas.form.kind': 'Type',
+  'cas.form.parent': 'Signed by',
+  'cas.form.parentPlaceholder': 'Choose a Root…',
+  'cas.form.name': 'Name',
+  'cas.form.organization': 'Organization (optional)',
+  'cas.form.validity': 'Validity (years)',
+  'cas.form.keyAlgo': 'Key algorithm',
+  'cas.form.algo.ecdsa-p384': 'ECDSA P-384 (recommended for a Root)',
+  'cas.form.algo.ecdsa-p256': 'ECDSA P-256 (recommended for an intermediate)',
+  'cas.form.algo.rsa-3072': 'RSA 3072 (legacy compatibility)',
+  'cas.form.algo.rsa-4096': 'RSA 4096 (legacy compatibility)',
+  'cas.form.rootHint':
+    'A Root should only sign intermediates. Once they exist you can export its key and take it offline.',
+  'cas.form.noRoot': 'Create a Root first: an intermediate needs one to sign it.',
+  'cas.error.exists': 'A CA with this name already exists.',
+  'cas.error.keyOffline': "This Root's key is offline, so it cannot sign.",
+  'cas.error.unlock': 'Unlock the vault first.',
+} as const;
+
+export type MessageKey = keyof typeof en;

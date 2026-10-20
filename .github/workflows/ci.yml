@@ -21,6 +21,27 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # The frontend is built first because the Go binary embeds web/dist.
+      - name: Frontend install
+        run: npm ci
+        working-directory: web
+      - name: Frontend type-check
+        run: npm run check
+        working-directory: web
+      - name: Frontend tests
+        run: npm test
+        working-directory: web
+      - name: Frontend build
+        run: npm run build
+        working-directory: web
+      - name: Frontend dependency audit
+        run: npm audit --audit-level=high
+        working-directory: web
       - name: Verify formatting
         run: test -z "$(gofmt -l .)"
       - name: Vet

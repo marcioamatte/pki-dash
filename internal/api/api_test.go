@@ -45,7 +45,7 @@ type env struct {
 	st   *store.Store
 }
 
-func newEnv(t *testing.T, secure bool) *env {
+func newEnv(t *testing.T, secure bool, mods ...func(*Options)) *env {
 	t.Helper()
 	st, err := store.Open(filepath.Join(t.TempDir(), "pki.db"))
 	if err != nil {
@@ -58,7 +58,11 @@ func newEnv(t *testing.T, secure bool) *env {
 		t.Fatal(err)
 	}
 	logs := &syncBuf{}
-	a := New(Options{Service: svc, Auth: au, Logger: slog.New(slog.NewJSONHandler(logs, nil)), SecureCookies: secure, SetupToken: setupToken})
+	o := Options{Service: svc, Auth: au, Logger: slog.New(slog.NewJSONHandler(logs, nil)), SecureCookies: secure, SetupToken: setupToken}
+	for _, m := range mods {
+		m(&o)
+	}
+	a := New(o)
 	// Tests make many credential calls from one address.
 	a.strict = newLimiter(1000, 1000, time.Now)
 	a.general = newLimiter(1000, 1000, time.Now)
