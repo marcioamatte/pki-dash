@@ -141,6 +141,13 @@ func Init(passphrase string) (*Header, *Vault, error) {
 	return initWith(passphrase, DefaultParams)
 }
 
+// InitWithParams is Init with explicit KDF parameters. They are validated
+// against the same accepted range as stored headers, so this cannot be used
+// to create a vault weaker than the OWASP minimum.
+func InitWithParams(passphrase string, p Params) (*Header, *Vault, error) {
+	return initWith(passphrase, p)
+}
+
 func initWith(passphrase string, p Params) (*Header, *Vault, error) {
 	if err := checkPassphrase(passphrase); err != nil {
 		return nil, nil, err
