@@ -63,4 +63,11 @@ export function formatDate(iso: string): string {
     : new Intl.DateTimeFormat(state.locale, { dateStyle: 'medium' }).format(d);
 }
 
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : new Intl.DateTimeFormat(state.locale, { dateStyle: 'medium', timeStyle: 'medium' }).format(d);
+}
+
 if (typeof document !== 'undefined') document.documentElement.lang = state.locale;

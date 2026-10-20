@@ -70,5 +70,6 @@ describe('trust instructions', () => {
     expect(fileName.leafKey('app.lab')).toBe('app.lab.key');
     expect(fileName.leafChain('app.lab')).toBe('app.lab-fullchain.pem');
     expect(fileName.caCert('Lab Root CA')).toBe('lab-root-ca.crt');
+    expect(fileName.caKey('Lab Root CA')).toBe('lab-root-ca.key');
   });
 });

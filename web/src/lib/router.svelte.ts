@@ -1,6 +1,8 @@
 // A tiny hash router: the server only ever has to serve index.html at "/".
-export type Route = '/cas' | '/certs';
-const known: Route[] = ['/cas', '/certs'];
+export type Route = '/cas' | '/certs' | '/users' | '/audit';
+const known: Route[] = ['/cas', '/certs', '/users', '/audit'];
+/** Routes only administrators may open; the server enforces this too. */
+export const adminRoutes: Route[] = ['/users', '/audit'];
 
 function parse(hash: string): Route {
   const p = hash.replace(/^#/, '');

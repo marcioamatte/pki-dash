@@ -7,12 +7,14 @@
   import { formatDate, t } from '../lib/i18n.svelte';
   import { isAdmin, session } from '../lib/session.svelte';
   import CreateCA from './CreateCA.svelte';
+  import RootOffline from './RootOffline.svelte';
   import TrustDialog from './TrustDialog.svelte';
 
   let cas = $state<CA[] | null>(null);
   let error = $state('');
   let creating = $state(false);
   let trusting = $state<CA | null>(null);
+  let offline = $state<CA | null>(null);
 
   async function load() {
     try {
@@ -105,6 +107,10 @@
               {:else}
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
                 <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (trusting = ca)}>{t('trust.button')}</button>
+                {#if isAdmin() && ca.key_held}
+                  <span class="text-slate-300 dark:text-slate-700"> · </span>
+                  <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (offline = ca)}>{t('offline.button')}</button>
+                {/if}
               {/if}
             </td>
           </tr>
@@ -112,6 +118,15 @@
       </tbody>
     </table>
   </div>
+{/if}
+
+{#if offline}
+  <RootOffline
+    ca={offline}
+    hasIntermediates={(cas ?? []).some((c) => c.parent_id === offline?.id)}
+    onChanged={load}
+    onClose={() => (offline = null)}
+  />
 {/if}
 
 {#if trusting}
