@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { t } from '../lib/i18n.svelte';
+  import { router } from '../lib/router.svelte';
   import { session, signOut } from '../lib/session.svelte';
   import LanguageSwitcher from './LanguageSwitcher.svelte';
 
@@ -27,6 +28,21 @@
         {/if}
       </div>
     </div>
+    {#if session.phase === 'ready'}
+      <nav class="mx-auto flex max-w-5xl gap-1 px-4" aria-label="Main">
+        {#each [['/cas', 'nav.cas'], ['/certs', 'nav.certs']] as const as [path, label] (path)}
+          <a
+            href={`#${path}`}
+            aria-current={router.path === path ? 'page' : undefined}
+            class="-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap {router.path === path
+              ? 'border-teal-600 font-medium text-teal-700 dark:text-teal-400'
+              : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'}"
+          >
+            {t(label)}
+          </a>
+        {/each}
+      </nav>
+    {/if}
   </header>
 
   <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-8">

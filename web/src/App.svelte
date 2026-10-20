@@ -3,7 +3,9 @@
   import Layout from './components/Layout.svelte';
   import { t } from './lib/i18n.svelte';
   import { refresh, session } from './lib/session.svelte';
+  import { router } from './lib/router.svelte';
   import CAs from './pages/CAs.svelte';
+  import Certificates from './pages/Certificates.svelte';
   import Login from './pages/Login.svelte';
   import Setup from './pages/Setup.svelte';
   import Alert from './components/Alert.svelte';
@@ -20,6 +22,8 @@
     <Setup />
   {:else if session.phase === 'login'}
     <Login />
+  {:else if router.path === '/certs'}
+    <Certificates />
   {:else}
     <CAs />
   {/if}

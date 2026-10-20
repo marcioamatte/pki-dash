@@ -76,6 +76,8 @@ export async function reloadVault(): Promise<void> {
 }
 
 export const isAdmin = () => session.role === 'admin';
+/** Admins and operators can issue certificates; viewers cannot. */
+export const canIssue = () => session.role === 'admin' || session.role === 'operator';
 
 // An expired session (401 from any call) sends the user back to the login screen.
 setUnauthorizedHandler(() => {
