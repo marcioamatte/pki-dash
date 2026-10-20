@@ -57,4 +57,35 @@ BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
 CREATE TRIGGER audit_log_no_delete BEFORE DELETE ON audit_log
 BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
 `,
+
+	// 2: users and sessions
+	`
+CREATE TABLE users (
+	id              TEXT PRIMARY KEY,
+	username        TEXT NOT NULL UNIQUE COLLATE NOCASE CHECK (length(username) BETWEEN 3 AND 64),
+	-- PHC-format Argon2id hash. NULL only for externally authenticated users.
+	password_hash   TEXT,
+	role            TEXT NOT NULL CHECK (role IN ('admin', 'operator', 'viewer')),
+	auth_source     TEXT NOT NULL DEFAULT 'local' CHECK (auth_source IN ('local', 'oidc')),
+	external_id     TEXT,
+	disabled        INTEGER NOT NULL DEFAULT 0 CHECK (disabled IN (0, 1)),
+	failed_attempts INTEGER NOT NULL DEFAULT 0,
+	locked_until    INTEGER NOT NULL DEFAULT 0,
+	created_at      INTEGER NOT NULL,
+	CHECK ((auth_source = 'local' AND password_hash IS NOT NULL) OR auth_source = 'oidc'),
+	UNIQUE (auth_source, external_id)
+) STRICT;
+
+-- Only the SHA-256 of the session token is stored, so a copy of the database
+-- does not yield usable sessions.
+CREATE TABLE sessions (
+	token_hash BLOB PRIMARY KEY,
+	user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	csrf       TEXT NOT NULL,
+	created_at INTEGER NOT NULL,
+	last_seen  INTEGER NOT NULL,
+	expires_at INTEGER NOT NULL
+) STRICT;
+CREATE INDEX sessions_user ON sessions(user_id);
+`,
 }
