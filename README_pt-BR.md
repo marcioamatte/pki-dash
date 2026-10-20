@@ -23,12 +23,15 @@ make build                           # compila a interface web (requer Node 20.1
 
 Depois abra <https://localhost:8443>.
 
+Ou com Docker (um único container, sem privilégios, sistema de arquivos somente leitura): veja [Implantação](docs/02-deployment_pt-BR.md).
+
 O servidor se recusa a iniciar sem que você escolha como ele será servido. Na primeira execução ele imprime no log um **token de setup** de uso único; informe-o na interface web (ou envie a `POST /api/v1/setup`) para criar o primeiro admin e a senha mestra. Após cada reinício o vault fica bloqueado: desbloqueie pela interface (ou `POST /api/v1/vault/unlock`), para que as chaves das CAs nunca fiquem decifradas em disco.
 
 ## Documentação
 
 - [Visão e escopo](docs/00-vision-and-scope_pt-BR.md)
 - [Decisão de stack](docs/01-stack-decision_pt-BR.md)
+- [Implantação (Docker)](docs/02-deployment_pt-BR.md)
 
 ## Licença
 
