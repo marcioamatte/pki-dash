@@ -4,7 +4,7 @@ A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs 
 
 > Translations: [pt-BR](README_pt-BR.md)
 
-> **Status: early development. The backend, JSON API and a first web UI (setup, sign-in, vault unlock, creating and listing CAs, issuing and downloading certificates, trust instructions per OS) work. User management and audit screens are still to come. Not ready for real use.**
+> **Status: early development. The backend, JSON API and a first web UI (setup, sign-in, vault unlock, creating and listing CAs, issuing and downloading certificates, trust instructions per OS, users and roles, the audit log, and taking a Root offline) work. Not ready for real use.**
 
 > **Disclaimer:** pki-dash is meant for internal environments such as homelabs, labs and test machines. It is **not** intended for public PKI or for settings where a CA compromise would have critical impact. It does not replace an HSM, a formal key ceremony or a commercial CA.
 

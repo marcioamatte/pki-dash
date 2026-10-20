@@ -26,7 +26,7 @@ export function setUnauthorizedHandler(fn: () => void): void {
 
 const base = '/api/v1';
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function call<T>(method: string, path: string, body: unknown, as: 'json' | 'text'): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (method !== 'GET') headers['X-CSRF-Token'] = csrfToken;
@@ -44,6 +44,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   if (res.status === 204) return undefined as T;
+  if (res.ok && as === 'text') return (await res.text()) as T;
 
   let data: unknown;
   try {
@@ -58,6 +59,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   return data as T;
 }
+
+const request = <T>(method: string, path: string, body?: unknown) => call<T>(method, path, body, 'json');
+const requestText = (method: string, path: string, body?: unknown) => call<string>(method, path, body, 'text');
 
 // ---- types ----
 
@@ -111,6 +115,22 @@ export interface Issued {
   private_key_pem?: string;
   chain_pem: string;
 }
+export interface User {
+  id: string;
+  username: string;
+  role: Role;
+  auth_source: 'local' | 'oidc';
+  disabled: boolean;
+  created_at: string;
+}
+export interface AuditEntry {
+  seq: number;
+  time: string;
+  actor: string;
+  action: string;
+  target: string;
+  detail: string;
+}
 export type KeyAlgo = 'ecdsa-p256' | 'ecdsa-p384' | 'rsa-3072' | 'rsa-4096';
 export interface NewCA {
   kind: 'root' | 'intermediate';
@@ -137,6 +157,24 @@ export const api = {
 
   listCAs: () => request<CA[]>('GET', '/cas'),
   createCA: (b: NewCA) => request<CA>('POST', '/cas', b),
+
+  listUsers: () => request<User[]>('GET', '/users'),
+  createUser: (b: { username: string; password: string; role: Role }) => request<{ id: string }>('POST', '/users', b),
+  patchUser: (id: string, b: { role?: Role; disabled?: boolean }) =>
+    request<void>('PATCH', `/users/${encodeURIComponent(id)}`, b),
+  resetPassword: (id: string, new_password: string) =>
+    request<void>('POST', `/users/${encodeURIComponent(id)}/password`, { new_password }),
+  changeOwnPassword: (current_password: string, new_password: string) =>
+    request<void>('POST', '/me/password', { current_password, new_password }),
+
+  audit: (limit: number) => request<AuditEntry[]>('GET', `/audit?limit=${limit}`),
+  auditVerify: () => request<{ ok: boolean; message?: string }>('GET', '/audit/verify'),
+
+  /** The Root's private key as PEM text. The most sensitive response this API has. */
+  exportKey: (id: string, master_passphrase: string) =>
+    requestText('POST', `/cas/${encodeURIComponent(id)}/export-key`, { master_passphrase }),
+  removeKey: (id: string, master_passphrase: string, confirm_name: string) =>
+    request<void>('POST', `/cas/${encodeURIComponent(id)}/remove-key`, { master_passphrase, confirm_name }),
 
   listCerts: (caId?: string) => request<Cert[]>('GET', '/certificates' + (caId ? `?ca_id=${encodeURIComponent(caId)}` : '')),
   issueCert: (caId: string, b: NewCert) => request<Issued>('POST', `/cas/${encodeURIComponent(caId)}/certificates`, b),

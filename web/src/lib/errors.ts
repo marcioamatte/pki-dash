@@ -14,11 +14,13 @@ const byCode: Record<string, MessageKey> = {
   vault_locked: 'cas.error.unlock',
   key_offline: 'cas.error.keyOffline',
   already_exists: 'cas.error.exists',
+  last_admin: 'users.error.lastAdmin',
 };
 
-export function errorMessage(e: unknown): string {
+/** `overrides` lets a screen give a code its own wording (for example "already exists" for a user). */
+export function errorMessage(e: unknown, overrides: Record<string, MessageKey> = {}): string {
   if (e instanceof ApiError) {
-    const key = byCode[e.code];
+    const key = overrides[e.code] ?? byCode[e.code];
     if (key) return t(key);
     // Validation problems are actionable; show the server's explanation.
     if (e.code === 'invalid_input' || e.code === 'bad_request' || e.code === 'policy_violation') return e.message;

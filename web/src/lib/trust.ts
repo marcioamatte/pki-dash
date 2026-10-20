@@ -36,6 +36,7 @@ export function trustCommands(os: OS, caName: string): string | null {
 
 export const fileName = {
   caCert: (name: string) => `${safeStem(name)}.crt`,
+  caKey: (name: string) => `${safeStem(name)}.key`,
   leafCert: (cn: string) => `${safeStem(cn.replace(/^\*\./, 'wildcard.'))}.crt`,
   leafKey: (cn: string) => `${safeStem(cn.replace(/^\*\./, 'wildcard.'))}.key`,
   leafChain: (cn: string) => `${safeStem(cn.replace(/^\*\./, 'wildcard.'))}-fullchain.pem`,
