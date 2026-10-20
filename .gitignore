@@ -5,7 +5,8 @@
 
 # Frontend
 web/node_modules/
-web/dist/
+web/dist/*
+!web/dist/.gitkeep
 web/.svelte-kit/
 
 # Local data and secrets: never commit

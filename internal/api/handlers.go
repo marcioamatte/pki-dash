@@ -61,6 +61,8 @@ func (s *Server) routes(mux *http.ServeMux) {
 	s.handle(mux, "GET "+v1+"/audit", route{perm: auth.PermViewAudit}, s.audit)
 	s.handle(mux, "GET "+v1+"/audit/verify", route{perm: auth.PermViewAudit}, s.auditVerify)
 
+	s.uiRoutes(mux)
+
 	// Anything unmatched: 405 if the path exists for another method, else 404.
 	// (A catch-all pattern would otherwise swallow the mux's own 405.)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

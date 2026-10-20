@@ -29,6 +29,7 @@ import (
 	"github.com/marcioamatte/pki-dash/internal/auth"
 	"github.com/marcioamatte/pki-dash/internal/service"
 	"github.com/marcioamatte/pki-dash/internal/store"
+	"github.com/marcioamatte/pki-dash/web"
 )
 
 func main() {
@@ -103,7 +104,7 @@ func run(ctx context.Context, args []string) error {
 
 	srv := api.New(api.Options{
 		Service: svc, Auth: au, Logger: log,
-		SecureCookies: !*insecure, SetupToken: setupToken,
+		SecureCookies: !*insecure, SetupToken: setupToken, UI: web.Dist(),
 	})
 	httpSrv := &http.Server{
 		Addr:              *listen,
