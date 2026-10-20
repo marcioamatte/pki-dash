@@ -32,6 +32,9 @@ import (
 	"github.com/marcioamatte/pki-dash/web"
 )
 
+// version is set at build time: -ldflags "-X main.version=1.2.3".
+var version = "dev"
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -49,18 +52,27 @@ func env(name, def string) string {
 }
 
 func run(ctx context.Context, args []string) error {
+	if len(args) > 0 && args[0] == "healthcheck" {
+		return healthcheck(args[1:])
+	}
 	fs := flag.NewFlagSet("pki-dash", flag.ContinueOnError)
 	dataDir := fs.String("data-dir", env("PKI_DASH_DATA_DIR", "./data"), "directory holding the database (env PKI_DASH_DATA_DIR)")
 	listen := fs.String("listen", env("PKI_DASH_LISTEN", "127.0.0.1:8443"), "address to listen on (env PKI_DASH_LISTEN)")
 	certFile := fs.String("tls-cert", env("PKI_DASH_TLS_CERT", ""), "TLS certificate file (env PKI_DASH_TLS_CERT)")
 	keyFile := fs.String("tls-key", env("PKI_DASH_TLS_KEY", ""), "TLS private key file (env PKI_DASH_TLS_KEY)")
 	selfSigned := fs.Bool("tls-self-signed", false, "serve TLS with a throwaway self-signed certificate (labs only)")
+	showVersion := fs.Bool("version", false, "print the version and exit")
 	insecure := fs.Bool("insecure-http", false, "serve plain HTTP: development, or behind a TLS-terminating proxy you trust")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	if *showVersion {
+		fmt.Println("pki-dash", version)
+		return nil
+	}
 
 	log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	log.Info("starting", "version", version)
 
 	// Refuse to guess about transport security: the operator must choose.
 	modes := 0
@@ -194,4 +206,50 @@ func selfSignedCert() (tls.Certificate, string, error) {
 	}
 	sum := sha256.Sum256(der)
 	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}, hex.EncodeToString(sum[:]), nil
+}
+
+// healthcheck probes the running server and exits non-zero if it is not
+// serving. It exists because the container image has no shell and no curl.
+func healthcheck(args []string) error {
+	fs := flag.NewFlagSet("healthcheck", flag.ContinueOnError)
+	listen := fs.String("listen", env("PKI_DASH_LISTEN", "127.0.0.1:8443"), "the server's listen address (env PKI_DASH_LISTEN)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	return probe(*listen)
+}
+
+// probe asks the server at addr for its status. A wildcard listen address is
+// probed on loopback. Certificate verification is skipped because the target
+// is this very process, usually with a throwaway or private-CA certificate:
+// the probe checks liveness, not identity.
+func probe(addr string) error {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return err
+	}
+	if ip := net.ParseIP(host); host == "" || (ip != nil && ip.IsUnspecified()) {
+		host = "127.0.0.1"
+	}
+	target := net.JoinHostPort(host, port)
+	client := &http.Client{
+		Timeout:   3 * time.Second,
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}, //nolint:gosec // see above
+		// Never follow redirects: they could point somewhere that is not this process.
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	var lastErr error
+	for _, scheme := range []string{"https", "http"} {
+		resp, err := client.Get(scheme + "://" + target + "/api/v1/status")
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unhealthy: status %d", resp.StatusCode)
+		}
+		return nil
+	}
+	return lastErr
 }

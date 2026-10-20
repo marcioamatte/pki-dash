@@ -23,12 +23,15 @@ make build                           # builds the web UI (needs Node 20.19+ or 2
 
 Then open <https://localhost:8443>.
 
+Or with Docker (a single container, unprivileged, read-only filesystem): see [Deployment](docs/02-deployment.md).
+
 The server refuses to start unless you choose how it is served. On first run it prints a one-time **setup token** to its log; enter it in the web UI (or send it to `POST /api/v1/setup`) to create the first admin and the master passphrase. After every restart the vault is locked: unlock it from the UI (or `POST /api/v1/vault/unlock`), so CA keys never sit decrypted on disk.
 
 ## Documentation
 
 - [Vision and scope](docs/00-vision-and-scope.md)
 - [Stack decision](docs/01-stack-decision.md)
+- [Deployment (Docker)](docs/02-deployment.md)
 
 ## License
 

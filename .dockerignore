@@ -1,0 +1,18 @@
+# Keep the build context small and free of anything local or secret.
+.git
+.github
+.claude
+bin
+data
+docs
+*.db
+*.db-*
+*.pem
+*.key
+*.crt
+.env
+.env.*
+# The UI is built inside the image, never taken from the host.
+web/node_modules
+web/dist/*
+!web/dist/.gitkeep

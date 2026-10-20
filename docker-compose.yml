@@ -1,0 +1,31 @@
+# Example deployment. Adjust the TLS certificate and the published address.
+#
+#   mkdir certs && cp your.crt certs/tls.crt && cp your.key certs/tls.key
+#   (the key must be readable by uid 65532: see docs/02-deployment.md)
+#   docker compose up -d --build
+#   docker compose logs pki-dash | grep setup_token     # first run only
+#
+# For a quick lab try-out without certificates, replace the command with
+# ["-tls-self-signed"]: browsers will warn about the throwaway certificate.
+services:
+  pki-dash:
+    build: .                 # no published image yet: this builds it from this checkout
+    image: pki-dash:local
+    command: ["-tls-cert=/certs/tls.crt", "-tls-key=/certs/tls.key"]
+    ports:
+      # Bind to one interface rather than every one. Use 0.0.0.0 only on purpose.
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - pki-data:/data
+      - ./certs:/certs:ro
+    restart: unless-stopped
+
+    # Hardening: the process needs to write only to /data.
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 512m          # password hashing uses ~64 MiB per concurrent login (at most 4)
+
+volumes:
+  pki-data:
