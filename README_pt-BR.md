@@ -32,6 +32,7 @@ O servidor se recusa a iniciar sem que você escolha como ele será servido. Na 
 - [Visão e escopo](docs/00-vision-and-scope_pt-BR.md)
 - [Decisão de stack](docs/01-stack-decision_pt-BR.md)
 - [Implantação (Docker)](docs/02-deployment_pt-BR.md)
+- [Mantendo a Root offline](docs/03-offline-root_pt-BR.md)
 
 ## Licença
 

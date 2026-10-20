@@ -93,7 +93,8 @@ func mapError(w http.ResponseWriter, r *http.Request, log *slog.Logger, err erro
 		writeErr(w, http.StatusConflict, "last_admin", "cannot remove the last active admin")
 
 	case errors.Is(err, service.ErrIssueFromRoot), errors.Is(err, service.ErrBadParent), errors.Is(err, service.ErrNotARoot),
-		errors.Is(err, ca.ErrExceedsParent), errors.Is(err, ca.ErrPathLenExhausted):
+		errors.Is(err, ca.ErrExceedsParent), errors.Is(err, ca.ErrPathLenExhausted),
+		errors.Is(err, ca.ErrPolicy), errors.Is(err, ca.ErrKeyMismatch):
 		writeErr(w, http.StatusUnprocessableEntity, "policy_violation", err.Error())
 
 	case errors.Is(err, auth.ErrWeakPassword), errors.Is(err, auth.ErrInvalidUsername), errors.Is(err, auth.ErrInvalidRole),

@@ -88,4 +88,17 @@ CREATE TABLE sessions (
 ) STRICT;
 CREATE INDEX sessions_user ON sessions(user_id);
 `,
+
+	// 3: intermediate CAs waiting for a certificate signed elsewhere
+	`
+CREATE TABLE pending_cas (
+	id         TEXT PRIMARY KEY,
+	name       TEXT NOT NULL UNIQUE CHECK (length(name) BETWEEN 1 AND 200),
+	parent_id  TEXT NOT NULL REFERENCES cas(id) ON DELETE RESTRICT,
+	csr_pem    BLOB NOT NULL,
+	-- The intermediate's private key, encrypted like any other (see internal/vault).
+	key_blob   BLOB NOT NULL,
+	created_at INTEGER NOT NULL
+) STRICT;
+`,
 }

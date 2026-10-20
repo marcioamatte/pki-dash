@@ -1,0 +1,73 @@
+# Keeping the Root offline
+
+> Translations: [pt-BR](03-offline-root_pt-BR.md)
+
+The Root is the anchor of trust for everything below it, so the safest place for its private key is a machine that is not on a network. pki-dash supports that in two ways, and both end the same way: the service holds the intermediate's key and issues certificates, but never has the Root's.
+
+## Which path?
+
+| Your situation | What to do |
+|---|---|
+| The Root was made **elsewhere** (cfssl, openssl, another machine) | [Import its public certificate](#a-root-made-elsewhere), then request an intermediate. |
+| You created the Root **in pki-dash** | Use **Take offline** on the Root (export the key, then remove it from the service), then request an intermediate. |
+
+## A Root made elsewhere
+
+1. **Import the Root.** Send only the public certificate (`POST /api/v1/cas/import-root`). The service checks that it is self-signed, a CA allowed to have intermediates (path length not 0), uses a strong key, and is currently valid. The private key is never sent and never needed.
+2. **Request an intermediate** (`POST /api/v1/cas/{root}/intermediate-requests`). pki-dash generates the intermediate's key and keeps it, encrypted with the master passphrase, and returns a certificate request (CSR). The key never leaves the service.
+3. **Sign the CSR on the machine that keeps the Root.** Two ways, both tested:
+
+   **cfssl**, with a profile that makes a CA that can only sign service certificates (`ca-config.json`):
+
+   ```json
+   {
+     "signing": {
+       "profiles": {
+         "intermediate": {
+           "usages": ["cert sign", "crl sign"],
+           "expiry": "43800h",
+           "ca_constraint": { "is_ca": true, "max_path_len": 0, "max_path_len_zero": true }
+         }
+       }
+     }
+   }
+   ```
+
+   ```bash
+   cfssl sign -ca root.pem -ca-key root-key.pem -config ca-config.json -profile intermediate inter.csr \
+     | cfssljson -bare inter          # writes inter.pem
+   ```
+
+   **openssl**, with an extensions file (`inter.ext`):
+
+   ```ini
+   basicConstraints = critical, CA:TRUE, pathlen:0
+   keyUsage = critical, keyCertSign, cRLSign
+   subjectKeyIdentifier = hash
+   authorityKeyIdentifier = keyid
+   ```
+
+   ```bash
+   openssl x509 -req -in inter.csr -CA root.crt -CAkey root.key -CAcreateserial \
+     -days 1825 -sha384 -extfile inter.ext -out inter.crt
+   ```
+
+4. **Import the signed certificate** (`POST /api/v1/intermediate-requests/{id}/import`). From then on the intermediate behaves like any other: it issues service certificates, and they verify against the Root you never gave the service.
+
+## What the import checks
+
+A certificate is accepted only if all of this holds, so a mistake (or a tampered file) cannot slip in:
+
+- it is for **the key that made the request**, not some other key;
+- it is **signed by the Root** you chose;
+- it is a **CA with a path length of 0**: it may sign service certificates and nothing else. A certificate with no `pathlen` (openssl's default when you forget it) is **refused** with an explanation;
+- its key usage allows signing certificates;
+- it is valid now, and **within the Root's own validity**.
+
+A refused import leaves the request in place, so you can fix the certificate and try again, or cancel the request, which discards its key.
+
+## Notes
+
+- The Root's validity must outlast the intermediate's. Choose `-days` / `expiry` accordingly.
+- Pending requests keep their keys encrypted like any other, and a change of master passphrase carries them along.
+- Every step is in the audit log: `ca.import_root`, `ca.request_intermediate`, `ca.import_intermediate`, `ca.request_cancel`.
