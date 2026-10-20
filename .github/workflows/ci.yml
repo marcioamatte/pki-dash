@@ -29,6 +29,11 @@ jobs:
         run: CGO_ENABLED=0 go build ./...
       - name: Test
         run: go test -race ./...
+      - name: Third-party notices are up to date
+        run: |
+          ./scripts/gen-notices.sh > "$RUNNER_TEMP/notices.md"
+          diff -u THIRD_PARTY_NOTICES.md "$RUNNER_TEMP/notices.md" \
+            || { echo "Run scripts/gen-notices.sh and commit the result"; exit 1; }
       # Pinned version; module checksums are verified through the Go checksum DB.
       - name: Vulnerability scan
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
