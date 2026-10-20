@@ -425,3 +425,7 @@ func (s *Store) AuditEvent(ctx context.Context, actor, action, target, detail st
 		return s.appendAudit(ctx, tx, actor, action, target, detail)
 	})
 }
+
+// SetClock replaces the time source. It exists for tests of time-dependent
+// behaviour (lockouts, session expiry) and must not be used in production code.
+func (s *Store) SetClock(now func() time.Time) { s.now = now }
