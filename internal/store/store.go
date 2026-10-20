@@ -105,7 +105,10 @@ func (s *Store) tx(ctx context.Context, f func(*sql.Tx) error) error {
 	return tx.Commit()
 }
 
-func newID() string {
+// NewID returns a fresh random identifier. Callers that must bind data to a
+// CA's ID before inserting it (the encrypted key blob) generate it up front
+// and pass it in CA.ID.
+func NewID() string {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
 		panic(err) // the system CSPRNG failing is not recoverable
@@ -212,7 +215,7 @@ type CA struct {
 	CreatedAt time.Time
 }
 
-// CreateCA stores a CA and returns its new ID.
+// CreateCA stores a CA and returns its ID (ca.ID if set, otherwise a new one).
 func (s *Store) CreateCA(ctx context.Context, actor string, ca CA) (string, error) {
 	if ca.Name == "" || len(ca.CertPEM) == 0 {
 		return "", fmt.Errorf("%w: name and certificate are required", ErrInvalid)
@@ -223,7 +226,10 @@ func (s *Store) CreateCA(ctx context.Context, actor string, ca CA) (string, erro
 	default:
 		return "", fmt.Errorf("%w: a root has no parent and an intermediate needs one", ErrInvalid)
 	}
-	id := newID()
+	id := ca.ID
+	if id == "" {
+		id = NewID()
+	}
 	var parent any
 	if ca.ParentID != "" {
 		parent = ca.ParentID
@@ -334,7 +340,7 @@ func (s *Store) AddCertificate(ctx context.Context, actor string, c Certificate)
 	if err != nil {
 		return "", err
 	}
-	id := newID()
+	id := NewID()
 	err = s.tx(ctx, func(tx *sql.Tx) error {
 		_, err := tx.ExecContext(ctx,
 			`INSERT INTO certificates (id, ca_id, serial, common_name, sans, profile, cert_pem, not_before, not_after, key_generated, created_at)
@@ -410,4 +416,12 @@ func (s *Store) listCerts(ctx context.Context, query string, args ...any) ([]Cer
 		out = append(out, c)
 	}
 	return out, rows.Err()
+}
+
+// AuditEvent records an event that changes no stored row, such as a key export
+// or a login. Detail must never contain secrets.
+func (s *Store) AuditEvent(ctx context.Context, actor, action, target, detail string) error {
+	return s.tx(ctx, func(tx *sql.Tx) error {
+		return s.appendAudit(ctx, tx, actor, action, target, detail)
+	})
 }
