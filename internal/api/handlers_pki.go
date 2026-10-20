@@ -407,3 +407,113 @@ func (s *Server) auditVerify(w http.ResponseWriter, r *http.Request, _ *auth.Ses
 	}
 	return nil
 }
+
+// ---- CAs signed elsewhere ----
+
+// importRoot registers a Root made elsewhere, from its public certificate.
+func (s *Server) importRoot(w http.ResponseWriter, r *http.Request, p *auth.Session) error {
+	var in struct {
+		Name string `json:"name"`
+		Cert string `json:"certificate_pem"`
+	}
+	if err := decode(w, r, &in); err != nil {
+		return err
+	}
+	id, err := s.svc.ImportRoot(r.Context(), p.Username, in.Name, []byte(in.Cert))
+	if err != nil {
+		return err
+	}
+	c, err := s.svc.GetCA(r.Context(), id)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusCreated, toCA(c))
+	return nil
+}
+
+type requestDTO struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	ParentID  string `json:"parent_id"`
+	CreatedAt string `json:"created_at"`
+	CSR       string `json:"csr_pem,omitempty"` // only in the response that creates it
+}
+
+func toRequest(p service.PendingRequest, withCSR bool) requestDTO {
+	d := requestDTO{ID: p.ID, Name: p.Name, ParentID: p.ParentID, CreatedAt: rfc3339(p.CreatedAt)}
+	if withCSR {
+		d.CSR = string(p.CSRPEM)
+	}
+	return d
+}
+
+func (s *Server) requestIntermediate(w http.ResponseWriter, r *http.Request, p *auth.Session) error {
+	var in struct {
+		Name         string `json:"name"`
+		Organization string `json:"organization"`
+		KeyAlgo      string `json:"key_algo"`
+	}
+	if err := decode(w, r, &in); err != nil {
+		return err
+	}
+	algo, err := parseAlgo(in.KeyAlgo, ca.ECDSAP256)
+	if err != nil {
+		return err
+	}
+	req, err := s.svc.RequestIntermediate(r.Context(), p.Username, r.PathValue("id"),
+		service.IntermediateRequestParams{Name: in.Name, Organization: in.Organization, KeyAlgo: algo})
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusCreated, toRequest(*req, true))
+	return nil
+}
+
+func (s *Server) listRequests(w http.ResponseWriter, r *http.Request, _ *auth.Session) error {
+	ps, err := s.svc.ListPendingRequests(r.Context())
+	if err != nil {
+		return err
+	}
+	out := make([]requestDTO, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, toRequest(p, false))
+	}
+	writeJSON(w, http.StatusOK, out)
+	return nil
+}
+
+func (s *Server) requestCSR(w http.ResponseWriter, r *http.Request, _ *auth.Session) error {
+	p, err := s.svc.GetPendingRequest(r.Context(), r.PathValue("id"))
+	if err != nil {
+		return err
+	}
+	writePEM(w, p.Name+".csr", p.CSRPEM)
+	return nil
+}
+
+func (s *Server) importIntermediate(w http.ResponseWriter, r *http.Request, p *auth.Session) error {
+	var in struct {
+		Cert string `json:"certificate_pem"`
+	}
+	if err := decode(w, r, &in); err != nil {
+		return err
+	}
+	id, err := s.svc.ImportIntermediate(r.Context(), p.Username, r.PathValue("id"), []byte(in.Cert))
+	if err != nil {
+		return err
+	}
+	c, err := s.svc.GetCA(r.Context(), id)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusCreated, toCA(c))
+	return nil
+}
+
+func (s *Server) cancelRequest(w http.ResponseWriter, r *http.Request, p *auth.Session) error {
+	if err := s.svc.CancelPendingRequest(r.Context(), p.Username, r.PathValue("id")); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}

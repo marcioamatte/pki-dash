@@ -116,6 +116,10 @@ func NewID() string {
 	return hex.EncodeToString(b)
 }
 
+func isForeignKey(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "FOREIGN KEY")
+}
+
 func isUnique(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed")
 }
@@ -147,38 +151,45 @@ func (s *Store) VaultHeader(ctx context.Context) ([]byte, error) {
 	return h, err
 }
 
+// keyTables are the tables that hold encrypted private keys. A passphrase
+// change must move every one of them, or some key would be left behind.
+var keyTables = []string{"cas", "pending_cas"}
+
 // RewrapKeys replaces the vault header and re-encrypts every stored key blob
 // with rewrap, all in one transaction: either everything moves to the new
 // passphrase or nothing does.
 func (s *Store) RewrapKeys(ctx context.Context, actor string, newHeader []byte, rewrap func(id string, blob []byte) ([]byte, error)) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
-		rows, err := tx.QueryContext(ctx, `SELECT id, key_blob FROM cas WHERE key_blob IS NOT NULL`)
-		if err != nil {
-			return err
-		}
 		type item struct {
-			id   string
-			blob []byte
+			table string
+			id    string
+			blob  []byte
 		}
 		var items []item
-		for rows.Next() {
-			var it item
-			if err := rows.Scan(&it.id, &it.blob); err != nil {
-				rows.Close()
+		for _, table := range keyTables {
+			rows, err := tx.QueryContext(ctx, `SELECT id, key_blob FROM `+table+` WHERE key_blob IS NOT NULL`)
+			if err != nil {
 				return err
 			}
-			items = append(items, it)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return err
+			for rows.Next() {
+				it := item{table: table}
+				if err := rows.Scan(&it.id, &it.blob); err != nil {
+					rows.Close()
+					return err
+				}
+				items = append(items, it)
+			}
+			rows.Close()
+			if err := rows.Err(); err != nil {
+				return err
+			}
 		}
 		for _, it := range items {
 			nb, err := rewrap(it.id, it.blob)
 			if err != nil {
-				return fmt.Errorf("rewrap CA %s: %w", it.id, err)
+				return fmt.Errorf("rewrap %s %s: %w", it.table, it.id, err)
 			}
-			if _, err := tx.ExecContext(ctx, `UPDATE cas SET key_blob = ? WHERE id = ?`, nb, it.id); err != nil {
+			if _, err := tx.ExecContext(ctx, `UPDATE `+it.table+` SET key_blob = ? WHERE id = ?`, nb, it.id); err != nil {
 				return err
 			}
 		}

@@ -99,6 +99,10 @@ func generateKey(algo KeyAlgo) (crypto.Signer, error) {
 	return nil, fmt.Errorf("%w: %q", ErrUnsupportedAlgo, algo)
 }
 
+func pemCert(der []byte) []byte {
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+}
+
 func marshalKey(key crypto.Signer) ([]byte, error) {
 	der, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
