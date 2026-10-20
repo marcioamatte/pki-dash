@@ -4,7 +4,7 @@ Um painel web para criar e gerenciar uma PKI interna (Root CA, CAs intermediári
 
 > Idioma principal: [English](README.md)
 
-> **Status: desenvolvimento inicial. O backend, a API JSON e uma primeira interface web (setup, login, desbloqueio do cofre, criar e listar CAs, emitir e baixar certificados, instruções de confiança por sistema, usuários e papéis, auditoria e deixar uma Root offline) funcionam. Não está pronto para uso real.**
+> **Status: desenvolvimento inicial. O backend, a API JSON e uma primeira interface web (setup, login, desbloqueio do cofre, criar e listar CAs, emitir e baixar certificados, instruções de confiança por sistema, usuários e papéis, auditoria, deixar uma Root offline e importar uma Root ou intermediárias assinadas em outro lugar) funcionam. Não está pronto para uso real.**
 
 > **Aviso:** o pki-dash é destinado a ambientes internos, como homelabs, laboratórios e máquinas de teste. **Não** é destinado a PKI pública nem a cenários em que o comprometimento da CA tenha impacto crítico. Não substitui HSM, cerimônia de chaves formal nem uma CA comercial.
 

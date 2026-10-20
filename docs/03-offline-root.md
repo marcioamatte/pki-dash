@@ -54,6 +54,15 @@ The Root is the anchor of trust for everything below it, so the safest place for
 
 4. **Import the signed certificate** (`POST /api/v1/intermediate-requests/{id}/import`). From then on the intermediate behaves like any other: it issues service certificates, and they verify against the Root you never gave the service.
 
+## In the web UI
+
+Everything above is a screen, so you rarely need the API directly:
+
+1. **Import Root** (on the Certificate authorities page): paste the Root's public certificate or choose its `.crt` / `.pem` file.
+2. **New CA**, type *Intermediate*, parent = that Root. A Root whose key is not held by the service is offered as the parent and the form switches to **Create request**. (For a Root whose key *is* held, tick *Sign it elsewhere* to do the same.) You get the CSR to download, and the exact commands for cfssl or openssl, with the validity limited so the intermediate ends before the Root does.
+3. Sign it on the Root's machine with those commands.
+4. Under **Waiting for a signed certificate**, choose **Import certificate** and paste or choose the signed file. A refusal explains what is wrong (for example "an intermediate must have a path length of 0") and keeps the request, so you can fix the file and retry. **How to sign** reopens the commands; **Cancel request** discards the request and its key.
+
 ## What the import checks
 
 A certificate is accepted only if all of this holds, so a mistake (or a tampered file) cannot slip in:
