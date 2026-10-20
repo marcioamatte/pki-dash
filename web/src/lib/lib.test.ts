@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, ApiError, setCsrf, setUnauthorizedHandler } from './api';
-import { errorMessage } from './errors';
+import { cleanServerMessage, errorMessage } from './errors';
 import { detectLocale, interpolate, setLocale } from './i18n.svelte';
 import { en } from './messages/en';
 import { ptBR } from './messages/pt-BR';
@@ -92,6 +92,17 @@ describe('api client', () => {
   });
 });
 
+describe('cleanServerMessage', () => {
+  it('drops Go package prefixes and keeps the useful explanation', () => {
+    expect(cleanServerMessage('ca: certificate violates the CA policy: not signed by the chosen Root')).toBe('Not signed by the chosen Root');
+    expect(cleanServerMessage('ca: private key does not match certificate: the certificate is not for the key that made the request')).toBe(
+      'The certificate is not for the key that made the request',
+    );
+    expect(cleanServerMessage('ca: invalid request: common name is required')).toBe('Invalid request: common name is required');
+    expect(cleanServerMessage('plain text')).toBe('Plain text');
+  });
+});
+
 describe('errorMessage', () => {
   beforeEach(() => setLocale('en')); // do not depend on the machine's language
   it('uses translated texts for known codes', () => {
@@ -101,7 +112,7 @@ describe('errorMessage', () => {
   });
 
   it('shows validation explanations but hides everything else behind a generic message', () => {
-    expect(errorMessage(new ApiError(400, 'invalid_input', 'common name is required'))).toBe('common name is required');
+    expect(errorMessage(new ApiError(400, 'invalid_input', 'common name is required'))).toBe('Common name is required');
     expect(errorMessage(new ApiError(500, 'internal', 'pq: connection refused at 10.0.0.1'))).toBe(en['common.error.generic']);
     expect(errorMessage(new Error('boom'))).toBe(en['common.error.generic']);
   });

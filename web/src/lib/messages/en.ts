@@ -260,6 +260,55 @@ export const en = {
   'offline.done.title': 'The Root is offline',
   'offline.done.text': 'The service no longer holds the key of {name}. Its intermediates keep working.',
   'offline.done.kept': 'The key stays in the service. You can take the Root offline later.',
+
+  'import.root.button': 'Import Root',
+  'import.root.title': 'Import a Root made elsewhere',
+  'import.root.intro':
+    'Bring in a Root you created with cfssl, openssl or another machine. Only its public certificate is needed: the private key stays where it is.',
+  'import.root.name': 'Name',
+  'import.root.cert': 'Root certificate (PEM)',
+  'import.root.certHint': 'Paste it, or choose the .crt / .pem file.',
+  'import.root.file': 'Choose a file…',
+  'import.root.submit': 'Import Root',
+  'import.fileTooBig': 'That file is too large to be a certificate.',
+
+  'request.title': 'Request an intermediate (signed offline)',
+  'request.mode.direct': 'Sign it now, with the Root held by this service',
+  'request.mode.offline': 'Sign it elsewhere, with an offline Root',
+  'request.offlineForced': 'This Root’s key is not held by the service, so the intermediate has to be signed elsewhere.',
+  'request.hint':
+    'pki-dash creates the intermediate’s key and keeps it encrypted, then gives you a certificate request (CSR) to sign with the Root.',
+  'request.submit': 'Create request',
+  'request.done.title': 'Request created',
+  'request.done.next': 'Next: sign this request with the Root, then import the certificate you get back.',
+  'request.done.download': 'Download {file}',
+  'request.done.csr': 'Certificate request',
+  'request.done.close': 'Done',
+
+  'sign.title': 'How to sign it',
+  'sign.intro':
+    'On the machine that keeps the Root. The recipe makes a CA that may only sign service certificates (path length 0), which is the only kind this service accepts.',
+  'sign.files': 'Create this file:',
+  'sign.run': 'Then run, with the Root’s files:',
+  'sign.result': 'This produces {file}: import that file here.',
+  'sign.days': 'Validity (days)',
+  'sign.daysHint': 'Limited to end before the Root does.',
+  'sign.rootFiles': 'Replace root.pem / root-key.pem (or root.crt / root.key) with your Root’s certificate and private key.',
+
+  'pending.title': 'Waiting for a signed certificate',
+  'pending.subtitle': 'Intermediates whose key is here, waiting for the Root to sign them.',
+  'pending.col.name': 'Name',
+  'pending.col.root': 'Root',
+  'pending.col.created': 'Requested',
+  'pending.csr': 'Download CSR',
+  'pending.how': 'How to sign',
+  'pending.import': 'Import certificate',
+  'pending.cancel': 'Cancel request',
+  'pending.cancel.confirm': 'Cancel this request? Its key is discarded and cannot be recovered.',
+  'pending.import.title': 'Import the signed certificate for {name}',
+  'pending.import.cert': 'Signed certificate (PEM)',
+  'pending.import.hint': 'Paste it, or choose the file the signing command produced.',
+  'pending.import.submit': 'Import',
 } as const;
 
 export type MessageKey = keyof typeof en;

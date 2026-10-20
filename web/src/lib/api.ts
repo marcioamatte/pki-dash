@@ -131,6 +131,15 @@ export interface AuditEntry {
   target: string;
   detail: string;
 }
+export interface PendingCA {
+  id: string;
+  name: string;
+  parent_id: string;
+  created_at: string;
+}
+export interface RequestCreated extends PendingCA {
+  csr_pem: string;
+}
 export type KeyAlgo = 'ecdsa-p256' | 'ecdsa-p384' | 'rsa-3072' | 'rsa-4096';
 export interface NewCA {
   kind: 'root' | 'intermediate';
@@ -176,11 +185,21 @@ export const api = {
   removeKey: (id: string, master_passphrase: string, confirm_name: string) =>
     request<void>('POST', `/cas/${encodeURIComponent(id)}/remove-key`, { master_passphrase, confirm_name }),
 
+  importRoot: (name: string, certificate_pem: string) =>
+    request<CA>('POST', '/cas/import-root', { name, certificate_pem }),
+  requestIntermediate: (parentId: string, b: { name: string; organization?: string; key_algo: KeyAlgo }) =>
+    request<RequestCreated>('POST', `/cas/${encodeURIComponent(parentId)}/intermediate-requests`, b),
+  listRequests: () => request<PendingCA[]>('GET', '/intermediate-requests'),
+  importIntermediate: (id: string, certificate_pem: string) =>
+    request<CA>('POST', `/intermediate-requests/${encodeURIComponent(id)}/import`, { certificate_pem }),
+  cancelRequest: (id: string) => request<void>('DELETE', `/intermediate-requests/${encodeURIComponent(id)}`),
+
   listCerts: (caId?: string) => request<Cert[]>('GET', '/certificates' + (caId ? `?ca_id=${encodeURIComponent(caId)}` : '')),
   issueCert: (caId: string, b: NewCert) => request<Issued>('POST', `/cas/${encodeURIComponent(caId)}/certificates`, b),
 };
 
 export const downloadURL = {
+  requestCSR: (id: string) => `${base}/intermediate-requests/${encodeURIComponent(id)}/csr`,
   certPEM: (id: string) => `${base}/certificates/${encodeURIComponent(id)}/pem`,
   certFullchain: (id: string) => `${base}/certificates/${encodeURIComponent(id)}/fullchain`,
   caCert: (id: string) => `${base}/cas/${encodeURIComponent(id)}/cert`,

@@ -18,12 +18,21 @@ const byCode: Record<string, MessageKey> = {
 };
 
 /** `overrides` lets a screen give a code its own wording (for example "already exists" for a user). */
+/**
+ * Server explanations carry Go package prefixes ("ca: certificate violates the CA
+ * policy: ..."). The part after them is what a person needs to read.
+ */
+export function cleanServerMessage(m: string): string {
+  const out = m.replace(/^(?:(?:ca|service|store|vault|auth): )?(?:certificate violates the CA policy: |private key does not match certificate: )?/, '');
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
+
 export function errorMessage(e: unknown, overrides: Record<string, MessageKey> = {}): string {
   if (e instanceof ApiError) {
     const key = overrides[e.code] ?? byCode[e.code];
     if (key) return t(key);
     // Validation problems are actionable; show the server's explanation.
-    if (e.code === 'invalid_input' || e.code === 'bad_request' || e.code === 'policy_violation') return e.message;
+    if (e.code === 'invalid_input' || e.code === 'bad_request' || e.code === 'policy_violation') return cleanServerMessage(e.message);
   }
   return t('common.error.generic');
 }

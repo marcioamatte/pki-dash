@@ -54,6 +54,15 @@ A Root é a âncora de confiança de tudo abaixo dela, então o lugar mais segur
 
 4. **Importe o certificado assinado** (`POST /api/v1/intermediate-requests/{id}/import`). A partir daí a intermediária se comporta como qualquer outra: emite certificados de serviço, e eles verificam contra a Root que você nunca deu ao serviço.
 
+## Na interface web
+
+Tudo o que está acima é uma tela, então raramente você precisa da API diretamente:
+
+1. **Importar Root** (na página de Autoridades certificadoras): cole o certificado público da Root ou escolha o arquivo `.crt` / `.pem`.
+2. **Nova CA**, tipo *Intermediária*, pai = essa Root. Uma Root cuja chave não está com o serviço é oferecida como pai e o formulário passa para **Criar requisição**. (Para uma Root cuja chave *está* com o serviço, marque *Assinar em outro lugar* para fazer o mesmo.) Você recebe o CSR para baixar e os comandos exatos para cfssl ou openssl, com a validade limitada para que a intermediária termine antes da Root.
+3. Assine na máquina da Root com esses comandos.
+4. Em **Aguardando certificado assinado**, escolha **Importar certificado** e cole ou escolha o arquivo assinado. Uma recusa explica o que está errado (por exemplo "uma intermediária precisa ter path length 0") e mantém o pedido, então você pode corrigir o arquivo e tentar de novo. **Como assinar** reabre os comandos; **Cancelar pedido** descarta o pedido e a chave dele.
+
 ## O que a importação confere
 
 Um certificado só é aceito se tudo isto valer, então um engano (ou um arquivo adulterado) não passa:

@@ -2,15 +2,19 @@
   import { onMount } from 'svelte';
   import Alert from '../components/Alert.svelte';
   import VaultGate from '../components/VaultGate.svelte';
-  import { api, downloadURL, type CA } from '../lib/api';
+  import { api, downloadURL, type CA, type PendingCA } from '../lib/api';
   import { errorMessage } from '../lib/errors';
   import { formatDate, t } from '../lib/i18n.svelte';
   import { isAdmin, session } from '../lib/session.svelte';
   import CreateCA from './CreateCA.svelte';
+  import ImportRoot from './ImportRoot.svelte';
+  import Pending from './Pending.svelte';
   import RootOffline from './RootOffline.svelte';
   import TrustDialog from './TrustDialog.svelte';
 
   let cas = $state<CA[] | null>(null);
+  let pending = $state<PendingCA[]>([]);
+  let importingRoot = $state(false);
   let error = $state('');
   let creating = $state(false);
   let trusting = $state<CA | null>(null);
@@ -19,6 +23,8 @@
   async function load() {
     try {
       cas = await api.listCAs();
+      // Pending requests are an admin matter: others are not even asked.
+      pending = isAdmin() ? await api.listRequests() : [];
       error = '';
     } catch (e) {
       error = errorMessage(e);
@@ -49,9 +55,12 @@
     <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('cas.subtitle')}</p>
   </div>
   {#if isAdmin()}
-    <button class="btn-primary shrink-0" disabled={!vaultReady} onclick={() => (creating = true)}>
-      {t('cas.create')}
-    </button>
+    <div class="flex shrink-0 gap-2">
+      <button class="btn-secondary" onclick={() => (importingRoot = true)}>{t('import.root.button')}</button>
+      <button class="btn-primary" disabled={!vaultReady} onclick={() => (creating = true)}>
+        {t('cas.create')}
+      </button>
+    </div>
   {/if}
 </div>
 
@@ -120,6 +129,14 @@
   </div>
 {/if}
 
+{#if isAdmin() && pending.length > 0}
+  <Pending {pending} cas={cas ?? []} onChanged={load} />
+{/if}
+
+{#if importingRoot}
+  <ImportRoot onImported={() => { importingRoot = false; load(); }} onClose={() => (importingRoot = false)} />
+{/if}
+
 {#if offline}
   <RootOffline
     ca={offline}
@@ -134,5 +151,5 @@
 {/if}
 
 {#if creating}
-  <CreateCA {roots} onCreated={created} onClose={() => (creating = false)} />
+  <CreateCA {roots} onCreated={created} onChanged={load} onClose={() => (creating = false)} />
 {/if}
