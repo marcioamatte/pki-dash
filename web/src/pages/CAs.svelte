@@ -11,6 +11,7 @@
   import CreateCA from './CreateCA.svelte';
   import ImportRoot from './ImportRoot.svelte';
   import Pending from './Pending.svelte';
+  import DestroyKey from './DestroyKey.svelte';
   import RevokeCA from './RevokeCA.svelte';
   import RootCrlWizard from './RootCrlWizard.svelte';
   import RootOffline from './RootOffline.svelte';
@@ -24,6 +25,7 @@
   let trusting = $state<CA | null>(null);
   let offline = $state<CA | null>(null);
   let revokingCa = $state<CA | null>(null);
+  let destroyingKey = $state<CA | null>(null);
   let rootCrlFor = $state<CA | null>(null);
 
   const reasonLabel = (r?: string) => (r === 'ca_compromise' || isReason(r) ? t(`reason.${r}` as 'reason.superseded') : '');
@@ -129,6 +131,9 @@
                 {#if isAdmin() && !ca.revoked}
                   <span class="text-slate-300 dark:text-slate-700"> · </span>
                   <button type="button" class="text-red-700 hover:underline dark:text-red-400" onclick={() => (revokingCa = ca)}>{t('cas.revoke')}</button>
+                {:else if isAdmin() && ca.revoked && ca.key_held}
+                  <span class="text-slate-300 dark:text-slate-700"> · </span>
+                  <button type="button" class="text-red-700 hover:underline dark:text-red-400" onclick={() => (destroyingKey = ca)}>{t('cas.destroyKey')}</button>
                 {/if}
               {:else}
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
@@ -167,6 +172,18 @@
       rootCrlFor = (cas ?? []).find((c) => c.id === rootId) ?? null;
     }}
     onClose={() => (revokingCa = null)}
+  />
+{/if}
+
+{#if destroyingKey}
+  <DestroyKey
+    ca={destroyingKey}
+    onDestroyed={load}
+    onPublish={(rootId) => {
+      destroyingKey = null;
+      rootCrlFor = (cas ?? []).find((c) => c.id === rootId) ?? null;
+    }}
+    onClose={() => (destroyingKey = null)}
   />
 {/if}
 

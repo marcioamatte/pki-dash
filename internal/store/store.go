@@ -322,7 +322,8 @@ func (s *Store) ListCAs(ctx context.Context) ([]CA, error) {
 // DropCAKey erases the stored private key of a CA. Callers must have handed
 // the key to the operator first: this is how a Root goes offline, and it
 // cannot be undone.
-func (s *Store) DropCAKey(ctx context.Context, actor, id string) error {
+// detail goes into the audit entry.
+func (s *Store) DropCAKey(ctx context.Context, actor, id, detail string) error {
 	return s.tx(ctx, func(tx *sql.Tx) error {
 		res, err := tx.ExecContext(ctx, `UPDATE cas SET key_blob = NULL WHERE id = ? AND key_blob IS NOT NULL`, id)
 		if err != nil {
@@ -331,7 +332,7 @@ func (s *Store) DropCAKey(ctx context.Context, actor, id string) error {
 		if n, _ := res.RowsAffected(); n != 1 {
 			return ErrNotFound
 		}
-		return s.appendAudit(ctx, tx, actor, "ca.drop_key", id, "")
+		return s.appendAudit(ctx, tx, actor, "ca.drop_key", id, detail)
 	})
 }
 

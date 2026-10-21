@@ -148,6 +148,19 @@ authorityInfoAccess = caIssuers;URI:http://pki.lab:8080/ca/<id-da-root>.crt
 
 Clientes rigorosos recusam uma cadeia cuja CRL expirou. Uma Root que quase nunca é ligada precisa, portanto, publicar uma lista com **validade longa** (os comandos acima usam 180 dias) e **renová-la antes de acabar**, mesmo sem mudança. O painel mostra a lista da Root como *Expirada* e avisa. Publique uma lista vazia assim que as intermediárias apontarem para a Root.
 
+## Destruindo a chave de uma intermediária revogada
+
+Uma intermediária revogada nunca mais vai assinar, então a chave privada dela é só um risco: é exatamente o que um atacante levaria. Depois que a revogação estiver publicada, destrua a chave.
+
+Em **Autoridades certificadoras**, uma intermediária revogada cuja chave o painel ainda guarda oferece **Destruir chave**. Você digita o nome da CA e a senha mestra, como para a chave de uma Root, e a chave é apagada para sempre: não há cópia nem volta. Só para admin.
+
+- **A CRL da Root precisa estar publicada antes.** O painel recusa até que a CRL da Root que lista essa intermediária tenha sido importada (veja acima): destruir a chave antes de os clientes poderem saber da revogação deixaria que continuassem confiando numa CA que só está aposentada do seu lado. A recusa explica isso e oferece abrir os passos da CRL da Root.
+- **Só intermediária revogada.** Uma CA em boa situação mantém a chave; a ação não é oferecida para ela, e o servidor a recusa.
+- **O que permanece:** o certificado da CA, a revogação e todos os certificados que ela emitiu continuam registrados e disponíveis para download, e a CRL da Root continua listando a CA. O que se vai é a capacidade de assinar qualquer coisa com essa CA, inclusive uma nova CRL dos certificados dela (que de toda forma deixa de ser renovada na revogação).
+- O log de auditoria registra `ca.drop_key` com o número da CRL da Root que permitiu.
+
+A chave de uma Root é outro caso: veja [Mantendo a Root offline](03-offline-root_pt-BR.md).
+
 ## Limites
 
 - **Ainda sem OCSP.** Somente CRL.

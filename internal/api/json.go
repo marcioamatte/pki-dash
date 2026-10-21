@@ -99,6 +99,10 @@ func mapError(w http.ResponseWriter, r *http.Request, log *slog.Logger, err erro
 		writeErr(w, http.StatusConflict, "crl_not_newer", err.Error())
 	case errors.Is(err, service.ErrNotIntermediate):
 		writeErr(w, http.StatusUnprocessableEntity, "policy_violation", "only an intermediate CA can be revoked")
+	case errors.Is(err, service.ErrNotRevoked):
+		writeErr(w, http.StatusConflict, "not_revoked", "only the key of a revoked intermediate can be destroyed")
+	case errors.Is(err, service.ErrRevocationNotPublished):
+		writeErr(w, http.StatusConflict, "revocation_not_published", "import the Root's CRL that lists this CA before destroying its key")
 	case errors.Is(err, service.ErrNoCRL):
 		writeErr(w, http.StatusNotFound, "no_crl", "this CA has not published a CRL")
 	case errors.Is(err, store.ErrExists):

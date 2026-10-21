@@ -137,13 +137,13 @@ func TestCAHierarchyAndConstraints(t *testing.T) {
 func TestDropCAKey(t *testing.T) {
 	s := open(t)
 	id := mustCA(t, s, root("Root"))
-	if err := s.DropCAKey(ctx, "admin", id); err != nil {
+	if err := s.DropCAKey(ctx, "admin", id, ""); err != nil {
 		t.Fatal(err)
 	}
 	if ca, _ := s.GetCA(ctx, id); ca.KeyBlob != nil {
 		t.Fatal("key blob must be gone")
 	}
-	if err := s.DropCAKey(ctx, "admin", id); !errors.Is(err, ErrNotFound) {
+	if err := s.DropCAKey(ctx, "admin", id, ""); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("second drop: err = %v, want ErrNotFound", err)
 	}
 	// The row is still there, and only one drop was audited.
