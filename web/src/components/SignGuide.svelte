@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import { t } from '../lib/i18n.svelte';
   import { session } from '../lib/session.svelte';
-  import { maxSigningDays, rootPointers, signers, signingGuide, type Signer } from '../lib/signing';
+  import { maxSigningDays, parseDomains, rootPointers, signers, signingGuide, type Signer } from '../lib/signing';
   import CodeBlock from './CodeBlock.svelte';
 
   let { requestName, rootNotAfter, rootId }: { requestName: string; rootNotAfter: string; rootId: string } = $props();
@@ -11,7 +11,9 @@
   const limit = untrack(() => maxSigningDays(rootNotAfter));
   let days = $state(String(limit));
   const pointers = $derived(rootPointers(session.publicUrl, rootId));
-  const guide = $derived(signingGuide(signer, requestName, Number(days), pointers));
+  let domainText = $state('');
+  const parsed = $derived(parseDomains(domainText));
+  const guide = $derived(signingGuide(signer, requestName, Number(days), pointers, parsed.invalid.length ? [] : parsed.domains));
 </script>
 
 <div class="flex flex-col gap-3 text-sm">
@@ -39,7 +41,21 @@
     <p class="hint" id="sign-days-hint">{t('sign.daysHint')}</p>
   </div>
 
+  <div>
+    <label class="label" for="sign-domains">{t('sign.domains')}</label>
+    <textarea id="sign-domains" class="input font-mono" rows="2" placeholder="lab, mattegroup.example" bind:value={domainText} aria-describedby="sign-domains-hint"></textarea>
+    <p class="hint" id="sign-domains-hint">{t('sign.domainsHint')}</p>
+    {#if parsed.invalid.length}
+      <p class="mt-1 text-sm text-red-700 dark:text-red-400" role="alert">{t('sign.domainsInvalid', { list: parsed.invalid.join(', ') })}</p>
+    {/if}
+  </div>
+
   <div class="flex flex-col gap-3" role="tabpanel">
+    {#if guide.unsupported}
+      <p role="alert" class="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+        {t('sign.cfsslNoConstraints')}
+      </p>
+    {:else}
     <p class="hint !mt-0">{pointers ? t('sign.pointers') : t('sign.noPointers')}</p>
     <p>{t('sign.files')}</p>
     {#each guide.files as f (f.name)}
@@ -52,5 +68,6 @@
     <CodeBlock code={guide.command} />
     <p class="hint">{t('sign.rootFiles')}</p>
     <p class="font-semibold">{t('sign.result', { file: guide.resultFile })}</p>
+    {/if}
   </div>
 </div>

@@ -77,6 +77,14 @@ A certificate is accepted only if all of this holds, so a mistake (or a tampered
 
 A refused import leaves the request in place, so you can fix the certificate and try again, or cancel the request, which discards its key.
 
+## Limiting which names an intermediate may issue for
+
+On the signing instructions you can list **domains** (for example `lab, mattegroup.example`). The openssl recipe then adds a critical `nameConstraints` extension to the intermediate: every client that validates the chain rejects a certificate for any other name, even if the intermediate's key leaks. A domain covers itself and everything below it.
+
+- **Only the openssl recipe can do it.** cfssl's command line has no way to add the extension, so with domains listed the cfssl tab says so instead of showing a recipe that would silently leave them out.
+- The service reads the constraints from the imported certificate and **refuses to issue** for names outside them (DNS names and IP ranges), instead of producing a certificate that no client would accept.
+- Put the constraints on the intermediate, not the Root, so one intermediate can be limited without touching the others.
+
 ## Notes
 
 - The Root's validity must outlast the intermediate's. Choose `-days` / `expiry` accordingly.

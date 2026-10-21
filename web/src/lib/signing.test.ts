@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { csrFileName, DEFAULT_SIGNING_DAYS, maxSigningDays, signingGuide } from './signing';
+import { csrFileName, DEFAULT_SIGNING_DAYS, maxSigningDays, parseDomains, signingGuide } from './signing';
 
 describe('signingGuide', () => {
   it('builds the cfssl recipe: a profile that forces pathlen 0, and the sign command', () => {
@@ -64,4 +64,31 @@ describe('maxSigningDays', () => {
 
 describe('csrFileName', () => {
   it('names the request file safely', () => expect(csrFileName('Casa Serviços')).toBe('casa-servicos.csr'));
+});
+
+describe('name constraints', () => {
+  it('parses domains from lines, commas and spaces, dropping wildcards and duplicates', () => {
+    expect(parseDomains('Lab, *.mattegroup.example\n.lab  lab')).toEqual({ domains: ['lab', 'mattegroup.example'], invalid: [] });
+  });
+  it('reports anything that is not a plain DNS name', () => {
+    const r = parseDomains('ok.lab x/y $(id) a_b.lab -bad.lab');
+    expect(r.domains).toEqual(['ok.lab']);
+    expect(r.invalid).toEqual(['x/y', '$(id)', 'a_b.lab', '-bad.lab']);
+  });
+  it('writes a critical nameConstraints line in the openssl recipe, and none without domains', () => {
+    const g = signingGuide('openssl', 'x', 365, undefined, ['lab', 'mattegroup.example']);
+    expect(g.files[0]!.content).toContain('nameConstraints = critical, permitted;DNS:lab, permitted;DNS:mattegroup.example');
+    expect(signingGuide('openssl', 'x', 365).files[0]!.content).not.toContain('nameConstraints');
+  });
+  it('never lets an unsafe domain into the recipe, even when passed directly', () => {
+    const g = signingGuide('openssl', 'x', 365, undefined, ['lab', 'a\nb', '$(id)']);
+    expect(g.files[0]!.content).toContain('permitted;DNS:lab');
+    expect(g.files[0]!.content).not.toMatch(/\$\(id\)|a\nb/);
+  });
+  it('says cfssl cannot apply them instead of giving a recipe that would silently omit them', () => {
+    const g = signingGuide('cfssl', 'x', 365, undefined, ['lab']);
+    expect(g.unsupported).toBe(true);
+    expect(g.command).toBe('');
+    expect(signingGuide('cfssl', 'x', 365).unsupported).toBeUndefined();
+  });
 });

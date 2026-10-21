@@ -14,6 +14,28 @@ export interface SigningGuide {
   command: string;
   /** The file the command produces: this is what gets imported. */
   resultFile: string;
+  /** True when this signer cannot apply the requested name constraints: do not show its recipe. */
+  unsupported?: boolean;
+}
+
+const DOMAIN = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/**
+ * Parses a list of domains (one per line or separated by commas/spaces) that an
+ * intermediate may issue for. A permitted domain covers itself and everything
+ * below it, so a leading "*." or "." is dropped. Anything that is not a plain
+ * DNS name is reported in `invalid` and never reaches a recipe.
+ */
+export function parseDomains(text: string): { domains: string[]; invalid: string[] } {
+  const domains: string[] = [];
+  const invalid: string[] = [];
+  for (const raw of text.split(/[\s,;]+/)) {
+    if (!raw) continue;
+    const d = raw.toLowerCase().replace(/^(\*\.|\.)/, '');
+    if (d.length > 253 || !DOMAIN.test(d)) invalid.push(raw);
+    else if (!domains.includes(d)) domains.push(d);
+  }
+  return { domains, invalid };
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -50,10 +72,13 @@ export function csrFileName(name: string): string {
   return `${safeStem(name)}.csr`;
 }
 
-export function signingGuide(signer: Signer, requestName: string, days: number = DEFAULT_SIGNING_DAYS, pointers?: Pointers): SigningGuide {
+export function signingGuide(signer: Signer, requestName: string, days: number = DEFAULT_SIGNING_DAYS, pointers?: Pointers, domains: string[] = []): SigningGuide {
+  const permitted = domains.filter((d) => DOMAIN.test(d));
   const d = Number.isInteger(days) && days >= 1 ? days : DEFAULT_SIGNING_DAYS;
   const stem = safeStem(requestName);
   if (signer === 'cfssl') {
+    // cfssl's command line has no way to put a nameConstraints extension in a certificate.
+    if (permitted.length > 0) return { files: [], command: '', resultFile: `${stem}.pem`, unsupported: true };
     const config = {
       signing: {
         profiles: {
@@ -83,6 +108,7 @@ export function signingGuide(signer: Signer, requestName: string, days: number =
           'keyUsage = critical, keyCertSign, cRLSign\n' +
           'subjectKeyIdentifier = hash\n' +
           'authorityKeyIdentifier = keyid' +
+          (permitted.length ? `\nnameConstraints = critical, ${permitted.map((d) => `permitted;DNS:${d}`).join(', ')}` : '') +
           (pointers ? `\ncrlDistributionPoints = URI:${pointers.crl}\nauthorityInfoAccess = caIssuers;URI:${pointers.issuer}` : ''),
       },
     ],
