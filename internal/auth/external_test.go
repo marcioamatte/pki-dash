@@ -209,3 +209,28 @@ func TestExternalDemotionCannotRemoveTheLastAdmin(t *testing.T) {
 		t.Fatalf("role changed anyway: %s", u.Role)
 	}
 }
+
+func TestLogoutReturnsTheProvidersHintOnlyForSSOSessions(t *testing.T) {
+	a, _, _ := setupSSO(t, roles)
+	id := ident("sub-7", "fabio", "pki-viewers")
+	id.IDToken = "header.payload.signature"
+	s, err := a.LoginExternal(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hint, err := a.Logout(ctx, s.Token)
+	if err != nil || hint != "header.payload.signature" {
+		t.Fatalf("hint %q err %v", hint, err)
+	}
+	if _, err := a.Validate(ctx, s.Token); !errors.Is(err, ErrInvalidSession) {
+		t.Fatalf("the session must be gone: %v", err)
+	}
+	// Second logout with the same token: nothing to report, not an error.
+	if hint, err := a.Logout(ctx, s.Token); err != nil || hint != "" {
+		t.Fatalf("%q %v", hint, err)
+	}
+	local := login(t, a, "root-admin", adminPW)
+	if hint, err := a.Logout(ctx, local.Token); err != nil || hint != "" {
+		t.Fatalf("a local session has no provider hint: %q %v", hint, err)
+	}
+}

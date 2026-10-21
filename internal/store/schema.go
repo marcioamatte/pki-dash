@@ -142,4 +142,11 @@ CREATE TABLE imported_crls (
 	der           BLOB NOT NULL
 ) STRICT;
 `,
+
+	// 6: what is needed to end the identity provider's session at sign-out
+	`
+-- The ID token a provider issued at sign-in, kept only to tell it which
+-- session to end when the user signs out here. Empty for local accounts.
+ALTER TABLE sessions ADD COLUMN idp_hint TEXT;
+`,
 }

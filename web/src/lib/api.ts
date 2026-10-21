@@ -193,7 +193,8 @@ export const api = {
     request<{ username: string }>('POST', '/setup', b),
   login: (username: string, password: string) =>
     request<SessionInfo>('POST', '/login', { username, password }),
-  logout: () => request<void>('POST', '/logout'),
+  /** An SSO session also answers with where to end the identity provider's session. */
+  logout: () => request<{ logout_url?: string } | undefined>('POST', '/logout'),
   me: () => request<SessionInfo>('GET', '/me'),
 
   initVault: (master_passphrase: string) => request<void>('POST', '/vault/init', { master_passphrase }),

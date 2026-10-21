@@ -214,3 +214,25 @@ func TestClaimHelpers(t *testing.T) {
 		t.Fatal("non-lists must be empty")
 	}
 }
+
+func TestLogoutURL(t *testing.T) {
+	f := oidctest.New(t)
+	p := newProvider(t, f, nil)
+	if got := p.LogoutURL("tok", "http://x/"); got != "" {
+		t.Fatalf("before the provider is known there is nothing to point at: %q", got)
+	}
+	if err := p.Check(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	u, err := url.Parse(p.LogoutURL("a.b.c", p.HomeURL()))
+	if err != nil || u.Path != "/logout" {
+		t.Fatalf("%v %v", u, err)
+	}
+	q := u.Query()
+	if q.Get("id_token_hint") != "a.b.c" || q.Get("client_id") != oidctest.ClientID || q.Get("post_logout_redirect_uri") != "http://127.0.0.1:9/" {
+		t.Fatalf("%v", q)
+	}
+	if p.LogoutURL("", "http://x/") != "" {
+		t.Fatal("without a hint there is nothing to end")
+	}
+}

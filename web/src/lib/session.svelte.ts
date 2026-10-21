@@ -77,12 +77,16 @@ function loadConfig() {
 }
 
 export async function signOut(): Promise<void> {
+  let next: string | undefined;
   try {
-    await api.logout();
+    next = (await api.logout())?.logout_url;
   } finally {
     signedOut();
     session.phase = 'login';
   }
+  // For an SSO session, go through the provider's logout so its own session ends
+  // too; otherwise "Sign in" would walk straight back in. It returns here after.
+  if (next && /^https?:\/\//.test(next)) location.assign(next);
 }
 
 export async function reloadVault(): Promise<void> {

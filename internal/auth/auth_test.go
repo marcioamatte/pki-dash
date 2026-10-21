@@ -146,7 +146,7 @@ func TestLoginAndSession(t *testing.T) {
 	if _, err := a.Validate(ctx, ""); !errors.Is(err, ErrInvalidSession) {
 		t.Fatalf("empty token: %v", err)
 	}
-	if err := a.Logout(ctx, s.Token); err != nil {
+	if _, err := a.Logout(ctx, s.Token); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := a.Validate(ctx, s.Token); !errors.Is(err, ErrInvalidSession) {

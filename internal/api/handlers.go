@@ -189,12 +189,22 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request, _ *auth.Session) 
 }
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request, _ *auth.Session) error {
+	var hint string
 	if c, err := r.Cookie(s.cookieName()); err == nil {
-		if err := s.auth.Logout(r.Context(), c.Value); err != nil {
-			return err
+		var lerr error
+		if hint, lerr = s.auth.Logout(r.Context(), c.Value); lerr != nil {
+			return lerr
 		}
 	}
 	s.clearCookie(w)
+	// A person who signed in through the provider is also signed out there, or
+	// the next "Sign in" would walk straight back in. The UI follows this address.
+	if s.oidc != nil {
+		if u := s.oidc.LogoutURL(hint, s.oidc.HomeURL()); u != "" {
+			writeJSON(w, http.StatusOK, map[string]string{"logout_url": u})
+			return nil
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

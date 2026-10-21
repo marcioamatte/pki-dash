@@ -66,7 +66,7 @@ func (s *Server) oidcCallback(w http.ResponseWriter, r *http.Request, _ *auth.Se
 		return fail(err)
 	}
 	sess, err := s.auth.LoginExternal(r.Context(), auth.ExternalIdentity{
-		Issuer: id.Issuer, Subject: id.Subject, Username: id.Username, Groups: id.Groups,
+		Issuer: id.Issuer, Subject: id.Subject, Username: id.Username, Groups: id.Groups, IDToken: id.IDToken,
 	})
 	if err != nil {
 		return fail(err)

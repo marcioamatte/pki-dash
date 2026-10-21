@@ -21,7 +21,7 @@ Passos para o console de administração do Keycloak 26. Os nomes podem variar u
 2. **Cliente.** *Clients → Create client*:
    - Client type **OpenID Connect**, Client ID `pki-dash`.
    - Capability config: **Client authentication: On**; marque apenas **Standard flow** (desligue *Direct access grants*).
-   - Access settings: *Root URL* `https://pki.lab:8443`, *Valid redirect URIs* exatamente `https://pki.lab:8443/api/v1/auth/oidc/callback`. Deixe *Web origins* vazio. Use o endereço que os navegadores usam para chegar ao pki-dash.
+   - Access settings: *Root URL* `https://pki.lab:8443`, *Valid redirect URIs* exatamente `https://pki.lab:8443/api/v1/auth/oidc/callback` e *Valid post logout redirect URIs* `https://pki.lab:8443/` (esta permite ao Keycloak devolver a pessoa ao pki-dash depois que ela sai). Deixe *Web origins* vazio. Use o endereço que os navegadores usam para chegar ao pki-dash.
 3. **Exigir PKCE.** No cliente, *Advanced → Advanced settings*, defina **Proof Key for Code Exchange Code Challenge Method** como `S256` e salve. O pki-dash sempre envia PKCE; isso faz o Keycloak exigi-lo.
 4. **Segredo.** Aba *Credentials*: copie o **Client secret**.
 5. **Grupos no ID token.** *Clients → pki-dash → Client scopes → pki-dash-dedicated → Configure a new mapper → Group Membership*:
@@ -76,7 +76,8 @@ O emissor e a URL externa precisam ser `https`, exceto `localhost` enquanto voc�
 
 ## O que vale saber
 
-- **Sair** encerra apenas a sessão do pki-dash, não a do Keycloak.
+- **Sair** encerra a sessão do pki-dash **e** a do Keycloak (logout iniciado pelo cliente, do OpenID Connect): o navegador faz uma rápida passagem pelo Keycloak e volta para a tela de login, e o próximo *Entrar com Keycloak* pede as credenciais de novo. Isso exige a *post logout redirect URI* do passo 2. Uma sessão iniciada antes de isso existir, ou um provedor sem endpoint de logout, encerra só a sessão do pki-dash.
+- Para encerrar a sessão do Keycloak ao sair, o pki-dash guarda no banco o ID token de cada sessão SSO até ela terminar, e não o usa para mais nada. Ele é uma declaração assinada de quem entrou, não uma credencial que dá acesso.
 - Uma sessão do pki-dash dura no máximo 12 horas (30 minutos sem uso), independentemente do Keycloak. Se você remover alguém no Keycloak, a pessoa sai no próximo login ou quando a sessão acabar, **não instantaneamente**. Para cortar na hora, **desative-a** também em *Usuários*.
 - O servidor busca a configuração do Keycloak no primeiro login de alguém, e de novo após uma falha, então o pki-dash sobe mesmo com o Keycloak fora do ar. O SSO fica indisponível até ele voltar; as contas locais continuam funcionando.
 - O acesso ao pki-dash não é mais forte que o seu Keycloak: use o MFA e as políticas de senha dele.
@@ -91,6 +92,7 @@ A tela de login mostra uma mensagem curta; o log do servidor tem o detalhe (`oid
 | *Essa autenticação expirou ou não foi iniciada aqui* | O login levou mais de 10 minutos, foi aberto em outro navegador, ou o navegador bloqueou o cookie. Garanta que `-external-url` é exatamente o endereço da barra do navegador, host incluso. |
 | *A resposta do provedor de identidade não pôde ser verificada* | Segredo do cliente errado; a URI de retorno difere da cadastrada no Keycloak; o emissor nos tokens difere de `-oidc-issuer` (o Keycloak o monta a partir do endereço usado para acessá-lo); ou os relógios dos dois servidores estão muito diferentes. |
 | *Não foi possível falar com o provedor de identidade agora* | O pki-dash não alcança a URL do emissor de onde está rodando (dentro de um container `localhost` é o próprio container), ou não confia no certificado do Keycloak: passe `-oidc-ca-file`. |
+| O Keycloak mostra *Invalid redirect uri* ao sair | *Valid post logout redirect URIs* no cliente está ausente ou não é `URL-EXTERNA/`. Você saiu do pki-dash de qualquer forma; corrija o cliente para sair também do Keycloak. |
 | O Keycloak mostra *Invalid parameter: redirect_uri* | A URI de retorno cadastrada no cliente não é exatamente `URL-EXTERNA/api/v1/auth/oidc/callback`. |
 
 ## O que fica registrado

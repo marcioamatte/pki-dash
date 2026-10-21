@@ -73,6 +73,9 @@ func (m RoleMap) Resolve(groups []string) (string, bool) {
 type ExternalIdentity struct {
 	Issuer, Subject, Username string
 	Groups                    []string
+	// IDToken is kept with the session only so that signing out can end the
+	// provider's session as well. It is never used to authorise anything.
+	IDToken string
 }
 
 var badNameChars = regexp.MustCompile(`[^A-Za-z0-9._@-]+`)
@@ -136,7 +139,7 @@ func (a *Auth) LoginExternal(ctx context.Context, id ExternalIdentity) (*Session
 		}
 		u.Role = role
 	}
-	return a.openSession(ctx, u, role, "oidc")
+	return a.openSession(ctx, u, role, "oidc", id.IDToken)
 }
 
 // provision creates the account on first sign-in. If the suggested name is

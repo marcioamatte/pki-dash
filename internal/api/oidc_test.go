@@ -203,3 +203,41 @@ func TestOIDCSecureCookiesUseTheHostPrefix(t *testing.T) {
 		t.Fatalf("%q", ck)
 	}
 }
+
+func TestOIDCLogoutEndsTheProvidersSessionToo(t *testing.T) {
+	e, idp := ssoEnv(t, false)
+	e.bootstrap()
+	c := e.client()
+	if r := c.do("GET", cb+"?"+startLogin(t, c, idp).Encode(), nil); location(r) != "/" {
+		t.Fatalf("%q", location(r))
+	}
+	var me struct {
+		CSRF string `json:"csrf_token"`
+	}
+	c.mustOK("GET", "/api/v1/me", nil, 200).json(t, &me)
+	c.csrf = me.CSRF
+
+	var out struct {
+		LogoutURL string `json:"logout_url"`
+	}
+	c.mustOK("POST", "/api/v1/logout", nil, 200).json(t, &out)
+	u, err := url.Parse(out.LogoutURL)
+	if err != nil || !strings.HasPrefix(out.LogoutURL, idp.URL()+"/logout?") {
+		t.Fatalf("the UI must be sent to the provider's logout: %q", out.LogoutURL)
+	}
+	q := u.Query()
+	if strings.Count(q.Get("id_token_hint"), ".") != 2 || q.Get("client_id") != oidctest.ClientID || q.Get("post_logout_redirect_uri") != "http://127.0.0.1:1/" {
+		t.Fatalf("logout parameters: %v", q)
+	}
+	if c.do("GET", "/api/v1/me", nil).status != 401 {
+		t.Fatal("the local session must be gone")
+	}
+}
+
+func TestLocalLogoutStaysAPlain204EvenWithSSOConfigured(t *testing.T) {
+	e, _ := ssoEnv(t, false)
+	c := e.bootstrap()
+	if r := c.do("POST", "/api/v1/logout", nil); r.status != 204 || len(r.body) != 0 {
+		t.Fatalf("%d %q", r.status, r.body)
+	}
+}

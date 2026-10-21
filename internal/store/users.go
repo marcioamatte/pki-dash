@@ -258,6 +258,8 @@ type Session struct {
 	TokenHash []byte
 	User      User
 	CSRF      string
+	// IDPHint is the ID token of an SSO sign-in, used only to end the provider's session.
+	IDPHint   string
 	CreatedAt time.Time
 	LastSeen  time.Time
 	ExpiresAt time.Time
@@ -265,11 +267,16 @@ type Session struct {
 
 // CreateSession stores a session. Callers pass the hash of the token, never
 // the token itself.
-func (s *Store) CreateSession(ctx context.Context, tokenHash []byte, userID, csrf string, expires time.Time) error {
+// idpHint is empty for local sign-ins.
+func (s *Store) CreateSession(ctx context.Context, tokenHash []byte, userID, csrf, idpHint string, expires time.Time) error {
 	now := s.now().Unix()
+	var hint any
+	if idpHint != "" {
+		hint = idpHint
+	}
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO sessions (token_hash, user_id, csrf, created_at, last_seen, expires_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		tokenHash, userID, csrf, now, now, expires.Unix())
+		`INSERT INTO sessions (token_hash, user_id, csrf, idp_hint, created_at, last_seen, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		tokenHash, userID, csrf, hint, now, now, expires.Unix())
 	return err
 }
 
@@ -278,11 +285,11 @@ func (s *Store) GetSession(ctx context.Context, tokenHash []byte) (Session, erro
 	var sess Session
 	var created, seen, exp int64
 	row := s.db.QueryRowContext(ctx,
-		`SELECT s.csrf, s.created_at, s.last_seen, s.expires_at, `+userCols("u")+`
+		`SELECT s.csrf, COALESCE(s.idp_hint, ''), s.created_at, s.last_seen, s.expires_at, `+userCols("u")+`
 		   FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`, tokenHash)
 	var u User
 	var locked, ucreated int64
-	err := row.Scan(&sess.CSRF, &created, &seen, &exp,
+	err := row.Scan(&sess.CSRF, &sess.IDPHint, &created, &seen, &exp,
 		&u.ID, &u.Username, &u.PasswordHash, &u.Role, &u.AuthSource, &u.ExternalID, &u.Disabled, &u.FailedAttempts, &locked, &ucreated)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Session{}, ErrNotFound

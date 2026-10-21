@@ -21,7 +21,7 @@ Steps for the Keycloak 26 admin console. Names may differ slightly in other vers
 2. **Client.** *Clients → Create client*:
    - Client type **OpenID Connect**, Client ID `pki-dash`.
    - Capability config: **Client authentication: On**; tick only **Standard flow** (turn off *Direct access grants*).
-   - Access settings: *Root URL* `https://pki.lab:8443`, *Valid redirect URIs* exactly `https://pki.lab:8443/api/v1/auth/oidc/callback`. Leave *Web origins* empty. Use the address your browsers use to reach pki-dash.
+   - Access settings: *Root URL* `https://pki.lab:8443`, *Valid redirect URIs* exactly `https://pki.lab:8443/api/v1/auth/oidc/callback`, and *Valid post logout redirect URIs* `https://pki.lab:8443/` (this one lets Keycloak send people back after they sign out). Leave *Web origins* empty. Use the address your browsers use to reach pki-dash.
 3. **Require PKCE.** In the client, *Advanced → Advanced settings*, set **Proof Key for Code Exchange Code Challenge Method** to `S256` and save. pki-dash always sends PKCE; this makes Keycloak insist on it.
 4. **Secret.** *Credentials* tab: copy the **Client secret**.
 5. **Groups in the ID token.** *Clients → pki-dash → Client scopes → pki-dash-dedicated → Configure a new mapper → Group Membership*:
@@ -76,7 +76,8 @@ Both the issuer and the external URL must be `https`, except for `localhost` whi
 
 ## Things to know
 
-- **Signing out** ends the pki-dash session only, not the one at Keycloak.
+- **Signing out** ends the pki-dash session **and** the one at Keycloak (OpenID Connect RP-initiated logout): the browser makes a short trip to Keycloak and returns to the login page, and the next *Sign in with Keycloak* asks for credentials again. This needs the *post logout redirect URI* of step 2. A session that started before this was available, or a provider without a logout endpoint, only ends the pki-dash session.
+- To end the Keycloak session at sign-out, pki-dash keeps the ID token of each SSO session in its database until that session ends, and uses it for nothing else. It is a signed statement of who signed in, not a credential that grants access.
 - A pki-dash session lasts at most 12 hours (30 minutes idle) regardless of Keycloak. If you remove someone in Keycloak, they are out at their next sign-in or when the session ends, **not instantly**. To cut them off right away, also **disable** them in *Users*.
 - The server fetches Keycloak's configuration the first time someone signs in, and again after a failure, so pki-dash starts even while Keycloak is down. SSO is simply unavailable until it is back; local accounts still work.
 - Access to pki-dash is not stronger than your Keycloak: use its MFA and password policies.
@@ -91,6 +92,7 @@ The login page shows a short message; the server log has the detail (`oidc: logi
 | *That sign-in expired or was not started here* | The sign-in took over 10 minutes, was opened in a different browser, or the browser blocked the cookie. Make sure `-external-url` is exactly the address in the browser bar, host included. |
 | *The identity provider's answer could not be verified* | Wrong client secret; the redirect URI differs from what Keycloak has; the issuer in the tokens differs from `-oidc-issuer` (Keycloak builds it from the address used to reach it); or the clocks of the two servers are far apart. |
 | *The identity provider cannot be reached right now* | pki-dash cannot reach the issuer URL from where it runs (inside a container `localhost` is the container itself), or it does not trust Keycloak's certificate: pass `-oidc-ca-file`. |
+| Keycloak shows *Invalid redirect uri* when you sign out | *Valid post logout redirect URIs* in the client is missing or is not `EXTERNAL-URL/`. You are signed out of pki-dash anyway; fix the client to sign out of Keycloak as well. |
 | Keycloak shows *Invalid parameter: redirect_uri* | The redirect URI registered in the client is not exactly `EXTERNAL-URL/api/v1/auth/oidc/callback`. |
 
 ## What is recorded

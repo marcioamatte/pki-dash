@@ -46,14 +46,14 @@ func TestUsernamesAreUniqueIgnoringCase(t *testing.T) {
 func TestSessionsDieWithTheirUser(t *testing.T) {
 	s := open(t)
 	id, _ := s.CreateUser(ctx, "x", User{Username: "alice", PasswordHash: "h", Role: RoleViewer}, false)
-	s.CreateSession(ctx, []byte("hash"), id, "csrf", time.Now().Add(time.Hour))
+	s.CreateSession(ctx, []byte("hash"), id, "csrf", "", time.Now().Add(time.Hour))
 	if _, err := s.db.Exec(`DELETE FROM users WHERE id = ?`, id); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.GetSession(ctx, []byte("hash")); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
-	if err := s.CreateSession(ctx, []byte("h2"), "ghost", "c", time.Now()); err == nil {
+	if err := s.CreateSession(ctx, []byte("h2"), "ghost", "c", "", time.Now()); err == nil {
 		t.Fatal("a session for a nonexistent user must be rejected")
 	}
 }
@@ -86,5 +86,38 @@ func TestUpgradeFromSchemaV1(t *testing.T) {
 	}
 	if _, err := s.CreateUser(ctx, "x", User{Username: "alice", PasswordHash: "h", Role: RoleAdmin}, false); err != nil {
 		t.Fatalf("new tables missing after upgrade: %v", err)
+	}
+}
+
+func TestUpgradeFromSchemaV5KeepsSessionsAndAddsTheProviderHint(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "v5.db")
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 5; i++ {
+		if _, err := raw.Exec(migrations[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	raw.Exec(`PRAGMA user_version = 5`)
+	raw.Exec(`INSERT INTO users (id,username,password_hash,role,created_at) VALUES ('u1','ana','h','admin',0)`)
+	raw.Exec(`INSERT INTO sessions (token_hash,user_id,csrf,created_at,last_seen,expires_at) VALUES (x'aa','u1','c',0,0,9999999999)`)
+	raw.Close()
+
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("upgrade: %v", err)
+	}
+	defer s.Close()
+	old, err := s.GetSession(ctx, []byte{0xaa})
+	if err != nil || old.IDPHint != "" {
+		t.Fatalf("an existing session must survive, without a hint: %v %+v", err, old)
+	}
+	if err := s.CreateSession(ctx, []byte("new"), "u1", "c", "a.b.c", time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := s.GetSession(ctx, []byte("new")); got.IDPHint != "a.b.c" {
+		t.Fatalf("hint: %q", got.IDPHint)
 	}
 }

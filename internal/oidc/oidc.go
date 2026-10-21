@@ -72,6 +72,7 @@ type Config struct {
 type Identity struct {
 	Issuer   string
 	Subject  string // stable per user at this issuer: the only thing identity is keyed on
+	IDToken  string // the raw token, kept as a hint for ending the provider's session
 	Username string // suggested account name, not trusted to be unique
 	Groups   []string
 }
@@ -89,6 +90,7 @@ type Provider struct {
 
 	mu       sync.Mutex
 	prov     *gooidc.Provider
+	endSess  string // the provider's end_session_endpoint, if it has one
 	verifier *gooidc.IDTokenVerifier
 	oauth    *oauth2.Config
 	pend     map[string]pending
@@ -155,6 +157,12 @@ func (p *Provider) discover(ctx context.Context) (*oauth2.Config, *gooidc.IDToke
 		return nil, nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
 	p.prov = prov
+	var meta struct {
+		EndSession string `json:"end_session_endpoint"`
+	}
+	if err := prov.Claims(&meta); err == nil && checkURL("end session endpoint", meta.EndSession) == nil {
+		p.endSess = meta.EndSession
+	}
 	p.verifier = prov.Verifier(&gooidc.Config{ClientID: p.cfg.ClientID})
 	p.oauth = &oauth2.Config{
 		ClientID: p.cfg.ClientID, ClientSecret: p.cfg.ClientSecret, RedirectURL: p.cfg.RedirectURL,
@@ -167,6 +175,40 @@ func (p *Provider) discover(ctx context.Context) (*oauth2.Config, *gooidc.IDToke
 func (p *Provider) Check(ctx context.Context) error {
 	_, _, err := p.discover(ctx)
 	return err
+}
+
+// LogoutURL is where to send the browser so that the provider ends its own
+// session too (OpenID Connect RP-Initiated Logout). It returns "" when the
+// provider offers no such endpoint or there is no hint to give it; the caller
+// then just ends the local session. The provider sends the browser back to
+// returnTo, which must be registered with it.
+func (p *Provider) LogoutURL(idTokenHint, returnTo string) string {
+	p.mu.Lock()
+	end := p.endSess
+	p.mu.Unlock()
+	if end == "" || idTokenHint == "" {
+		return ""
+	}
+	u, err := url.Parse(end)
+	if err != nil {
+		return ""
+	}
+	q := u.Query()
+	q.Set("id_token_hint", idTokenHint)
+	q.Set("client_id", p.cfg.ClientID)
+	q.Set("post_logout_redirect_uri", returnTo)
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+// HomeURL is the dashboard's front page, derived from the redirect URL: where
+// the provider returns the browser after a logout.
+func (p *Provider) HomeURL() string {
+	u, err := url.Parse(p.cfg.RedirectURL)
+	if err != nil {
+		return "/"
+	}
+	return u.Scheme + "://" + u.Host + "/"
 }
 
 func random() (string, error) {
@@ -265,6 +307,7 @@ func (p *Provider) Complete(ctx context.Context, q url.Values, binder string) (*
 	return &Identity{
 		Issuer:   idt.Issuer,
 		Subject:  idt.Subject,
+		IDToken:  raw,
 		Username: firstString(claims, p.cfg.UsernameClaim, "email"),
 		Groups:   stringList(lookup(claims, p.cfg.GroupsClaim)),
 	}, nil
