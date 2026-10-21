@@ -79,6 +79,7 @@
 
     <footer class="border-t border-slate-200 bg-white px-4 py-3 text-center text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
       {t('app.disclaimer')}
+      <strong class="font-semibold text-slate-700 dark:text-slate-200">{t('app.noWarranty')}</strong>
     </footer>
   </div>
   {#if account}<ChangePassword onClose={() => (account = false)} />{/if}
@@ -94,6 +95,9 @@
         {@render children()}
       </div>
     </main>
-    <footer class="px-4 py-4 text-center text-xs text-white/75">{t('app.disclaimer')}</footer>
+    <footer class="px-4 py-4 text-center text-xs text-white/75">
+      {t('app.disclaimer')}
+      <strong class="font-semibold text-white">{t('app.noWarranty')}</strong>
+    </footer>
   </div>
 {/if}
