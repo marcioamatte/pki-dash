@@ -27,21 +27,35 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}"
 RUN mkdir /out/data && chown 65532:65532 /out/data && chmod 700 /out/data
 
 # ---- 3. the runtime image: no shell, no package manager, not root ---------------
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:516757106de35205efb70b91ba03f6f1298424a0678c603255cf2852a7000087
+# Two ways to fill it, sharing everything else:
+#   - the default (the last stage, so a plain `docker build .` and `make docker`):
+#     the binary built above;
+#   - "release": the binary GoReleaser already built (docker build --target
+#     release), laid out as <os>/<arch>/pki-dash in the build context.
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:516757106de35205efb70b91ba03f6f1298424a0678c603255cf2852a7000087 AS base
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="pki-dash" \
       org.opencontainers.image.description="Web dashboard for managing an internal PKI, built on cfssl" \
       org.opencontainers.image.source="https://github.com/marcioamatte/pki-dash" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.version="${VERSION}"
-COPY --from=build /out/pki-dash /pki-dash
-COPY --from=build --chown=65532:65532 --chmod=0700 /out/data /data
 USER 65532:65532
 ENV PKI_DASH_DATA_DIR=/data \
     PKI_DASH_LISTEN=0.0.0.0:8443
-VOLUME /data
 EXPOSE 8443 8080
 # No default command on purpose: the server will not start until the operator
 # chooses how it is served (-tls-cert/-tls-key, -tls-self-signed or -insecure-http).
 ENTRYPOINT ["/pki-dash"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["/pki-dash", "healthcheck"]
+
+FROM base AS release
+ARG TARGETPLATFORM
+COPY ${TARGETPLATFORM}/pki-dash /pki-dash
+# An empty data directory owned by the unprivileged user, so a new volume is writable.
+COPY --chown=65532:65532 --chmod=0700 packaging/docker/data /data
+VOLUME /data
+
+FROM base
+COPY --from=build /out/pki-dash /pki-dash
+COPY --from=build --chown=65532:65532 --chmod=0700 /out/data /data
+VOLUME /data

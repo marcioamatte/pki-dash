@@ -79,3 +79,12 @@ func TestOIDCFlagsReadTheSecretFromAFile(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestEnvBool(t *testing.T) {
+	for v, want := range map[string]bool{"1": true, "true": true, "TRUE": true, " yes ": true, "on": true, "": false, "0": false, "false": false, "no": false, "maybe": false} {
+		t.Setenv("PKI_DASH_TEST_BOOL", v)
+		if got := envBool("PKI_DASH_TEST_BOOL"); got != want {
+			t.Errorf("%q: got %v", v, got)
+		}
+	}
+}

@@ -23,7 +23,7 @@ make build                           # builds the web UI (needs Node 20.19+ or 2
 
 Then open <https://localhost:8443>.
 
-Or with Docker (a single container, unprivileged, read-only filesystem): see [Deployment](docs/02-deployment.md).
+Or install a release: a `.deb`/`.rpm` package with a systemd service, a container image, or a bare binary for Linux, macOS and Windows: see [Installing](docs/06-installation.md). Docker details (a single container, unprivileged, read-only filesystem) are in [Deployment](docs/02-deployment.md).
 
 The server refuses to start unless you choose how it is served. On first run it prints a one-time **setup token** to its log; enter it in the web UI (or send it to `POST /api/v1/setup`) to create the first admin and the master passphrase. After every restart the vault is locked: unlock it from the UI (or `POST /api/v1/vault/unlock`), so CA keys never sit decrypted on disk.
 
@@ -35,6 +35,7 @@ The server refuses to start unless you choose how it is served. On first run it 
 - [Keeping the Root offline](docs/03-offline-root.md)
 - [Revocation and CRLs](docs/04-revocation.md)
 - [Signing in with Keycloak (OIDC)](docs/05-sso-keycloak.md)
+- [Installing: packages, image, binaries](docs/06-installation.md)
 
 ## License
 

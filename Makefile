@@ -1,4 +1,4 @@
-.PHONY: build ui test check docker clean
+.PHONY: build ui test check docker snapshot clean
 
 # Builds the frontend, then the static server binary that embeds it.
 build: ui
@@ -20,6 +20,12 @@ check: test
 docker:
 	docker build --build-arg VERSION=$$(git describe --tags --always --dirty) -t pki-dash:local .
 	./scripts/container-smoke.sh pki-dash:local
+
+# Builds everything a release builds (binaries, archives, packages, image) in ./dist,
+# signing and publishing nothing. Needs goreleaser v2 (see .github/workflows/release.yml
+# for the pinned version).
+snapshot:
+	goreleaser release --snapshot --clean --skip=sign,sbom,publish
 
 clean:
 	rm -rf bin web/dist/assets web/dist/index.html web/dist/favicon.svg
