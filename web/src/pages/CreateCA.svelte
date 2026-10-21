@@ -99,7 +99,7 @@
       <CodeBlock code={requested.csr_pem} />
     </div>
     <h3 class="text-sm font-semibold">{t('sign.title')}</h3>
-    <SignGuide requestName={requested.name} rootNotAfter={parent?.not_after ?? ''} />
+    <SignGuide requestName={requested.name} rootNotAfter={parent?.not_after ?? ''} rootId={requested.parent_id} />
     <div class="flex justify-end">
       <button type="button" class="btn-primary" onclick={onClose}>{t('request.done.close')}</button>
     </div>

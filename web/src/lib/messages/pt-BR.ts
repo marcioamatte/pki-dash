@@ -357,4 +357,65 @@ export const ptBR: Record<MessageKey, string> = {
     'A lista de revogação de {name} expirou. Clientes que checam revogação vão recusar os certificados dela até que seja renovada. Desbloqueie o cofre para renová-la.',
   'crl.alert.behind':
     'Algumas revogações de {name} estão registradas mas ainda não foram publicadas. Desbloqueie o cofre, ou clique em Atualizar agora, para publicá-las.',
+
+  'cas.revoked': 'Revogada',
+  'cas.revokedOn': 'Revogada em {date}: {reason}',
+  'cas.revoke': 'Revogar',
+  'cas.rootCrl': 'CRL da Root',
+  'reason.ca_compromise': 'A chave da CA foi comprometida',
+
+  'revokeCa.title': 'Revogar {name}',
+  'revokeCa.intro':
+    'Revogar uma intermediária é definitivo. Este serviço deixa de emitir por ela e de assinar listas com a chave dela, imediatamente.',
+  'revokeCa.warn':
+    'Os clientes só ficam sabendo pela lista de revogação da Root, e a Root fica offline. Depois de revogar, você gera e importa essa lista (o próximo passo).',
+  'revokeCa.confirm': 'Entendo que isso não pode ser desfeito.',
+  'revokeCa.submit': 'Revogar intermediária',
+  'revokeCa.done': 'Revogada. Este serviço não emite mais por ela.',
+  'revokeCa.next': 'Agora: publique a CRL da Root para que os clientes possam ver.',
+  'revokeCa.publishNow': 'Publicar a CRL da Root',
+
+  'rootcrl.title': 'CRL da Root: {name}',
+  'rootcrl.intro':
+    'A lista de revogação de uma Root é assinada pela Root, que fica offline. Gere-a na máquina da Root com os arquivos abaixo e depois importe o resultado aqui.',
+  'rootcrl.entries': 'Intermediárias revogadas que a lista precisa conter',
+  'rootcrl.none':
+    'Nenhuma intermediária está revogada, então a lista será vazia. Vale publicá-la mesmo assim: clientes que seguem o endereço de uma intermediária precisam encontrar uma.',
+  'rootcrl.col.name': 'Intermediária',
+  'rootcrl.col.serial': 'Série',
+  'rootcrl.col.reason': 'Motivo',
+  'rootcrl.col.date': 'Revogada em',
+  'rootcrl.days': 'Validade da lista (dias)',
+  'rootcrl.daysHint':
+    'Uma Root raramente é ligada, então dê folga à lista e renove-a antes de acabar, mesmo sem mudanças.',
+  'rootcrl.number': 'Número da CRL',
+  'rootcrl.numberHint': 'Já está nos arquivos abaixo: um acima da última lista publicada.',
+  'rootcrl.files': 'Crie estes arquivos ao lado do certificado (root.pem) e da chave privada (root-key.pem) da Root:',
+  'rootcrl.run': 'Depois execute:',
+  'rootcrl.result': 'Isso gera {file}: importe-o abaixo.',
+  'rootcrl.prefer': 'A lista do openssl leva o número da CRL e o motivo; a do cfssl não tem nenhum dos dois. Prefira o openssl se puder.',
+  'rootcrl.import': 'Importar a lista assinada',
+  'rootcrl.importCert': 'A CRL da Root (PEM, DER ou o base64 do cfssl)',
+  'rootcrl.importHint': 'Cole-a, ou escolha o arquivo que o comando gerou.',
+  'rootcrl.submit': 'Publicar CRL',
+  'rootcrl.published': 'Publicada. Lista nº {n}, válida até {date}, citando {count} intermediária(s) revogada(s).',
+  'rootcrl.publishedNoNumber': 'Publicada. Válida até {date}, citando {count} intermediária(s) revogada(s).',
+  'rootcrl.last': 'Última lista publicada: válida até {date}.',
+  'rootcrl.loadError': 'Não foi possível carregar o que a lista precisa conter.',
+
+  'crl.health.retired': 'Aposentada',
+  'crl.health.awaiting': 'Aguardando a lista da Root',
+  'crl.hint.retired': 'Esta CA está revogada: não emite nada e não assina mais listas.',
+  'crl.kind.root': 'Root, lista assinada offline',
+  'crl.publishRoot': 'Publicar CRL da Root',
+  'crl.alert.rootAwaiting':
+    'A Root {name} tem intermediárias revogadas, mas nenhuma lista de revogação que as cite. Clientes que checam a lista da Root não enxergam essas revogações até você publicar uma.',
+  'crl.alert.rootBehind':
+    'A lista de revogação da Root {name} não cita todas as intermediárias revogadas. Publique uma lista atualizada.',
+  'crl.alert.rootExpired':
+    'A lista de revogação da Root {name} expirou. Clientes que a checam vão recusar todo certificado encadeado a esta Root. Gere uma nova lista na máquina da Root e importe-a.',
+
+  'sign.pointers': 'A receita também grava na intermediária os endereços da CRL e do certificado da Root, para que os clientes possam checá-la depois.',
+  'sign.noPointers':
+    'Nenhum endereço público está configurado, então a intermediária não terá um endereço para a CRL da Root. Defina a URL pública do servidor para incluí-lo.',
 };

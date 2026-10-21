@@ -108,6 +108,13 @@ Uma intermediária é revogada pela **Root dela**, e a Root fica offline. Por is
    A lista do openssl leva o número da CRL e o motivo, então prefira-a se puder.
 4. **Importe-a** (`POST /api/v1/cas/{root}/crl/import`, PEM, DER ou o base64 do cfssl). O painel a serve no `/crl/<id-da-root>.crl` da Root.
 
+### Na interface web
+
+- **Revogue** uma intermediária pela linha dela na página de Autoridades certificadoras (admins). Escolha um motivo (`ca_compromise` está disponível aqui) e confirme que é definitivo. O diálogo então oferece **Publicar a CRL da Root**.
+- **CRL da Root**, na linha de uma Root (e **Publicar CRL da Root** no painel de *Listas de revogação*), abre um assistente: ele lista as intermediárias revogadas que a lista precisa conter, deixa você escolher a validade da lista e mostra os arquivos e o comando para **openssl** ou **cfssl**, já preenchidos (o número da CRL é o próximo). Execute-os na máquina da Root, depois cole ou escolha o resultado e clique em **Publicar CRL**.
+- O painel de *Listas de revogação* também mostra a lista da Root: *Em dia*, *Atrasada* (não cita todas as intermediárias revogadas), *Aguardando a lista da Root* ou *Expirada*, com um aviso. Uma intermediária revogada aparece como *Aposentada*.
+- Ao assinar uma nova intermediária, as receitas mostradas no painel agora incluem o endereço da CRL da Root, se o servidor tiver uma URL pública (veja acima).
+
 ### O que a importação confere
 
 Ela é publicada em nome da Root, então é conferida antes:

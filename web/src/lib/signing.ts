@@ -29,11 +29,28 @@ export function maxSigningDays(rootNotAfter: string, now: Date = new Date(), wan
   return Math.max(1, Math.min(wanted, left));
 }
 
+/** Where clients find the Root's CRL and certificate, written into an intermediate when it is signed. */
+export interface Pointers {
+  crl: string;
+  issuer: string;
+}
+
+/**
+ * The pointers for a Root, or undefined when there is no public address to point
+ * at. They end up inside a signing recipe, so they are only built from a plain
+ * http(s) base URL and a hex id: anything else is dropped rather than escaped.
+ */
+export function rootPointers(publicUrl: string | undefined, rootId: string): Pointers | undefined {
+  const base = (publicUrl ?? '').replace(/\/+$/, '');
+  if (!/^https?:\/\/[A-Za-z0-9._:\[\]-]+(?::\d+)?$/.test(base) || !/^[0-9a-f]{32}$/.test(rootId)) return undefined;
+  return { crl: `${base}/crl/${rootId}.crl`, issuer: `${base}/ca/${rootId}.crt` };
+}
+
 export function csrFileName(name: string): string {
   return `${safeStem(name)}.csr`;
 }
 
-export function signingGuide(signer: Signer, requestName: string, days: number = DEFAULT_SIGNING_DAYS): SigningGuide {
+export function signingGuide(signer: Signer, requestName: string, days: number = DEFAULT_SIGNING_DAYS, pointers?: Pointers): SigningGuide {
   const d = Number.isInteger(days) && days >= 1 ? days : DEFAULT_SIGNING_DAYS;
   const stem = safeStem(requestName);
   if (signer === 'cfssl') {
@@ -43,6 +60,7 @@ export function signingGuide(signer: Signer, requestName: string, days: number =
           intermediate: {
             usages: ['cert sign', 'crl sign'],
             expiry: `${d * 24}h`,
+            ...(pointers ? { crl_url: pointers.crl, issuer_urls: [pointers.issuer] } : {}),
             ca_constraint: { is_ca: true, max_path_len: 0, max_path_len_zero: true },
           },
         },
@@ -64,7 +82,8 @@ export function signingGuide(signer: Signer, requestName: string, days: number =
           'basicConstraints = critical, CA:TRUE, pathlen:0\n' +
           'keyUsage = critical, keyCertSign, cRLSign\n' +
           'subjectKeyIdentifier = hash\n' +
-          'authorityKeyIdentifier = keyid',
+          'authorityKeyIdentifier = keyid' +
+          (pointers ? `\ncrlDistributionPoints = URI:${pointers.crl}\nauthorityInfoAccess = caIssuers;URI:${pointers.issuer}` : ''),
       },
     ],
     command:

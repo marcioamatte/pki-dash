@@ -77,7 +77,7 @@
 {#if guiding}
   {@const g = guiding}
   <Dialog title={t('sign.title')} onClose={() => (guiding = null)} wide>
-    <SignGuide requestName={g.name} rootNotAfter={root(g.parent_id)?.not_after ?? ''} />
+    <SignGuide requestName={g.name} rootNotAfter={root(g.parent_id)?.not_after ?? ''} rootId={g.parent_id} />
     <div class="flex justify-end">
       <button type="button" class="btn-secondary" onclick={() => (guiding = null)}>{t('common.close')}</button>
     </div>

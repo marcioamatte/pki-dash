@@ -7,6 +7,8 @@ interface State {
   username: string;
   role: Role | null;
   vault: { initialized: boolean; unlocked: boolean };
+  /** Where clients reach the public listener (CRLs, CA certificates); empty when not configured. */
+  publicUrl: string;
 }
 
 export const session: State = $state({
@@ -14,6 +16,7 @@ export const session: State = $state({
   username: '',
   role: null,
   vault: { initialized: false, unlocked: false },
+  publicUrl: '',
 });
 
 function applyVault(s: Status) {
@@ -43,6 +46,7 @@ export async function refresh(): Promise<void> {
       session.username = me.username;
       session.role = me.role;
       session.phase = 'ready';
+      loadConfig();
     } catch (e) {
       if (!(e instanceof ApiError && e.status === 401)) throw e;
       signedOut();
@@ -60,6 +64,12 @@ export async function signIn(username: string, password: string): Promise<void> 
   session.role = s.role;
   applyVault(await api.status());
   session.phase = 'ready';
+  loadConfig();
+}
+
+/** Best effort: without it the signing recipes simply carry no CRL pointers. */
+function loadConfig() {
+  api.config().then((c) => (session.publicUrl = c.public_url)).catch(() => (session.publicUrl = ''));
 }
 
 export async function signOut(): Promise<void> {

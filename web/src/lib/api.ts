@@ -63,6 +63,8 @@ async function call<T>(method: string, path: string, body: unknown, as: 'json' |
 const request = <T>(method: string, path: string, body?: unknown) => call<T>(method, path, body, 'json');
 const requestText = (method: string, path: string, body?: unknown) => call<string>(method, path, body, 'text');
 
+import type { RootCrlEntry } from './rootcrl';
+
 // ---- types ----
 
 export type Role = 'admin' | 'operator' | 'viewer';
@@ -86,6 +88,9 @@ export interface CA {
   not_after: string;
   created_at: string;
   key_held: boolean;
+  revoked?: boolean;
+  revoked_at?: string;
+  revocation_reason?: string;
 }
 export type Profile = 'server' | 'client' | 'both';
 export interface Cert {
@@ -106,6 +111,10 @@ export interface Cert {
 export interface Crl {
   ca_id: string;
   ca_name: string;
+  kind: 'root' | 'intermediate';
+  /** Made elsewhere and imported: a Root's list. */
+  external: boolean;
+  ca_revoked: boolean;
   key_held: boolean;
   can_sign: boolean;
   published: boolean;
@@ -156,6 +165,13 @@ export interface PendingCA {
 }
 export interface RequestCreated extends PendingCA {
   csr_pem: string;
+}
+export interface RootCrlRequest {
+  root_id: string;
+  root_name: string;
+  entries: RootCrlEntry[];
+  next_number: number;
+  published?: { number: number; this_update: string; next_update: string; imported_at: string };
 }
 export type KeyAlgo = 'ecdsa-p256' | 'ecdsa-p384' | 'rsa-3072' | 'rsa-4096';
 export interface NewCA {
@@ -210,6 +226,13 @@ export const api = {
   importIntermediate: (id: string, certificate_pem: string) =>
     request<CA>('POST', `/intermediate-requests/${encodeURIComponent(id)}/import`, { certificate_pem }),
   cancelRequest: (id: string) => request<void>('DELETE', `/intermediate-requests/${encodeURIComponent(id)}`),
+
+  config: () => request<{ public_url: string }>('GET', '/config'),
+  revokeCA: (id: string, reason: string) =>
+    request<{ revoked_at: string; reason: string; root_id: string }>('POST', `/cas/${encodeURIComponent(id)}/revoke`, { reason }),
+  rootCrlRequest: (rootId: string) => request<RootCrlRequest>('GET', `/cas/${encodeURIComponent(rootId)}/crl-request`),
+  importRootCrl: (rootId: string, crl: string) =>
+    request<{ number: number; this_update: string; next_update: string; revoked: number }>('POST', `/cas/${encodeURIComponent(rootId)}/crl/import`, { crl }),
 
   revokeCert: (id: string, reason: string) =>
     request<{ revoked_at: string; reason: string; crl_published: boolean }>('POST', `/certificates/${encodeURIComponent(id)}/revoke`, { reason }),
