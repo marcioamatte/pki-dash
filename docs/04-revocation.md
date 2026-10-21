@@ -148,6 +148,19 @@ authorityInfoAccess = caIssuers;URI:http://pki.lab:8080/ca/<root-id>.crt
 
 Strict clients refuse a chain whose CRL has expired. A Root that is almost never switched on must therefore publish a list with a **long validity** (the commands above use 180 days) and **renew it before it ends**, even when nothing changed. The dashboard shows the Root's list as *Expired* and warns. Publish an empty one as soon as intermediates point at the Root.
 
+## Destroying the key of a revoked intermediate
+
+A revoked intermediate will never sign again, so its private key is only a liability: it is exactly what an attacker would take. Once the revocation is published, destroy the key.
+
+In **Certificate authorities**, a revoked intermediate whose key the dashboard still holds offers **Destroy key**. You type the CA's name and the master passphrase, as for a Root's key, and the key is erased for good: there is no copy and no way back. An admin only.
+
+- **The Root's CRL must be published first.** The dashboard refuses until the Root's CRL that lists this intermediate has been imported (see above): destroying the key before clients can learn of the revocation would leave them trusting a CA that is retired only on your side. The refusal explains this and offers to open the Root CRL steps.
+- **Only a revoked intermediate.** A CA in good standing keeps its key; the action is not offered for it, and the server refuses it.
+- **What stays:** the CA's certificate, its revocation, and every certificate it issued remain on record and downloadable, and the Root's CRL keeps listing it. What goes is the ability to sign anything with that CA, including a new CRL for its own certificates (it stops being renewed at revocation anyway).
+- The audit log records `ca.drop_key` with the number of the Root CRL that allowed it.
+
+A Root's key is a different case: see [Keeping the Root offline](03-offline-root.md).
+
 ## Limits
 
 - **No OCSP yet.** CRL only.

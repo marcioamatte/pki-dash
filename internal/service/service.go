@@ -15,6 +15,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"sync"
 	"time"
@@ -30,8 +31,12 @@ var (
 	ErrLocked             = errors.New("service: vault is locked")
 	ErrKeyOffline         = errors.New("service: this CA's private key is not held by the service")
 	ErrNotARoot           = errors.New("service: operation only applies to a Root CA")
-	ErrIssueFromRoot      = errors.New("service: service certificates must be issued by an intermediate, not the Root")
-	ErrBadParent          = errors.New("service: an intermediate must be signed by a Root CA")
+	// ErrNotRevoked means an intermediate's key cannot be destroyed while the CA is in good standing.
+	ErrNotRevoked = errors.New("service: only the key of a revoked intermediate can be destroyed")
+	// ErrRevocationNotPublished means the Root's CRL that lists this intermediate has not been imported yet.
+	ErrRevocationNotPublished = errors.New("service: the revocation is not published in the Root's CRL yet")
+	ErrIssueFromRoot          = errors.New("service: service certificates must be issued by an intermediate, not the Root")
+	ErrBadParent              = errors.New("service: an intermediate must be signed by a Root CA")
 )
 
 // MaxBrowserValidity is the longest validity browsers accept for publicly
@@ -313,7 +318,42 @@ func (s *Service) RemoveRootKey(ctx context.Context, actor, id string) error {
 	if c.Kind != store.KindRoot {
 		return ErrNotARoot
 	}
-	return s.st.DropCAKey(ctx, actor, id)
+	return s.st.DropCAKey(ctx, actor, id, "")
+}
+
+// RemoveKey destroys a CA's private key for good: a Root's, once it is kept
+// offline (see RemoveRootKey), or a revoked intermediate's.
+//
+// An intermediate's key is destroyed only after its revocation has been
+// published, that is, after the Root's CRL listing it has been imported (see
+// ImportRootCRL). Before that, no client could learn that the CA is revoked,
+// and the key is the only proof of control over it that may still be needed.
+func (s *Service) RemoveKey(ctx context.Context, actor, id string) error {
+	c, err := s.st.GetCA(ctx, id)
+	if err != nil {
+		return err
+	}
+	if c.Kind == store.KindRoot {
+		return s.RemoveRootKey(ctx, actor, id)
+	}
+	if c.KeyBlob == nil {
+		return ErrKeyOffline
+	}
+	if !c.Revoked() {
+		return ErrNotRevoked
+	}
+	serial, err := serialOf(c)
+	if err != nil {
+		return err
+	}
+	crl, err := s.st.GetImportedCRL(ctx, c.ParentID)
+	if errors.Is(err, store.ErrNotFound) || (err == nil && listedInCRL(crl.DER, []*big.Int{serial}) != 1) {
+		return ErrRevocationNotPublished
+	}
+	if err != nil {
+		return err
+	}
+	return s.st.DropCAKey(ctx, actor, id, fmt.Sprintf("revoked intermediate; listed in the Root's CRL number %d", crl.Number))
 }
 
 func (s *Service) ListCAs(ctx context.Context) ([]store.CA, error) { return s.st.ListCAs(ctx) }

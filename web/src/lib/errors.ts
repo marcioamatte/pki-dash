@@ -16,6 +16,8 @@ const byCode: Record<string, MessageKey> = {
   already_exists: 'cas.error.exists',
   last_admin: 'users.error.lastAdmin',
   external_user: 'users.error.external',
+  revocation_not_published: 'destroy.notPublished',
+  not_revoked: 'destroy.notRevoked',
 };
 
 /** `overrides` lets a screen give a code its own wording (for example "already exists" for a user). */

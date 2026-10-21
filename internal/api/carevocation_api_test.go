@@ -305,3 +305,64 @@ func TestRevokeCAValidation(t *testing.T) {
 	viewer := e.userClient(admin, "view-only", "viewer")
 	viewer.mustOK("GET", "/api/v1/config", nil, 200)
 }
+
+func TestDestroyingTheKeyOfARevokedIntermediateThroughTheAPI(t *testing.T) {
+	e := newEnv(t, false)
+	admin := e.bootstrap()
+	w := newOfflineWorld(t, admin)
+	ops := e.userClient(admin, "olga", "operator")
+	destroy := func(c *client, id, name, pass string) resp {
+		return c.do("POST", "/api/v1/cas/"+id+"/remove-key", m{"master_passphrase": pass, "confirm_name": name})
+	}
+
+	// In good standing: refused, with its own code.
+	if r := destroy(admin, w.aID, "Inter A", masterPW); r.status != 409 || r.errCode(t) != "not_revoked" {
+		t.Fatalf("in good standing: %d %s", r.status, r.body)
+	}
+	admin.mustOK("POST", "/api/v1/cas/"+w.aID+"/revoke", m{"reason": "ca_compromise"}, 200)
+
+	// Revoked, not yet in a Root CRL clients can fetch.
+	if r := destroy(admin, w.aID, "Inter A", masterPW); r.status != 409 || r.errCode(t) != "revocation_not_published" {
+		t.Fatalf("not published: %d %s", r.status, r.body)
+	}
+	admin.mustOK("POST", "/api/v1/cas/"+w.rootID+"/crl/import", m{"crl": w.rootCRL(t, 1, w.aCert)}, 200)
+
+	// The guards that were there for Root keys apply here too.
+	if r := destroy(ops, w.aID, "Inter A", masterPW); r.status != 403 {
+		t.Fatalf("an operator must not destroy keys: %d", r.status)
+	}
+	if r := destroy(admin, w.aID, "inter a", masterPW); r.status != 400 {
+		t.Fatalf("the name must be typed exactly: %d %s", r.status, r.body)
+	}
+	if r := destroy(admin, w.aID, "Inter A", "wrong passphrase 123"); r.status != 401 {
+		t.Fatalf("the master passphrase is required: %d %s", r.status, r.body)
+	}
+	var cas []struct {
+		ID      string `json:"id"`
+		KeyHeld bool   `json:"key_held"`
+		Revoked bool   `json:"revoked"`
+	}
+	held := func() map[string]bool {
+		admin.mustOK("GET", "/api/v1/cas", nil, 200).json(t, &cas)
+		out := map[string]bool{}
+		for _, c := range cas {
+			out[c.ID] = c.KeyHeld
+		}
+		return out
+	}
+	if !held()[w.aID] {
+		t.Fatal("the refusals above must leave the key alone")
+	}
+
+	admin.mustOK("POST", "/api/v1/cas/"+w.aID+"/remove-key", m{"master_passphrase": masterPW, "confirm_name": "Inter A"}, 204)
+	if h := held(); h[w.aID] || !h[w.bID] {
+		t.Fatalf("only A's key must be gone: %v", h)
+	}
+	if r := destroy(admin, w.aID, "Inter A", masterPW); r.status != 409 || r.errCode(t) != "key_offline" {
+		t.Fatalf("again: %d %s", r.status, r.body)
+	}
+	// B is in good standing and cannot be destroyed either, with its key intact.
+	if r := destroy(admin, w.bID, "Inter B", masterPW); r.status != 409 || r.errCode(t) != "not_revoked" {
+		t.Fatalf("sibling: %d %s", r.status, r.body)
+	}
+}

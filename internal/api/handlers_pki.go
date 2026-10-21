@@ -172,7 +172,7 @@ func (s *Server) removeKey(w http.ResponseWriter, r *http.Request, p *auth.Sessi
 	if err := s.svc.VerifyPassphrase(r.Context(), p.Username, in.Passphrase); err != nil {
 		return err
 	}
-	if err := s.svc.RemoveRootKey(r.Context(), p.Username, c.ID); err != nil {
+	if err := s.svc.RemoveKey(r.Context(), p.Username, c.ID); err != nil {
 		return err
 	}
 	w.WriteHeader(http.StatusNoContent)

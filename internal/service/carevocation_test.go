@@ -350,3 +350,85 @@ func TestRootCRLAndCARevocationAreAudited(t *testing.T) {
 		}
 	}
 }
+
+func TestDestroyingTheKeyOfARevokedIntermediate(t *testing.T) {
+	p := newOffline(t)
+	s := p.s
+
+	// A CA in good standing keeps its key: nothing here can destroy it by mistake.
+	if err := s.RemoveKey(ctx, "admin", p.a); !errors.Is(err, ErrNotRevoked) {
+		t.Fatalf("a CA in good standing: %v", err)
+	}
+	if err := s.RemoveKey(ctx, "admin", "ghost"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("unknown: %v", err)
+	}
+
+	// An older Root CRL (empty) is already published; then A is revoked.
+	if _, err := s.ImportRootCRL(ctx, "admin", p.rootID, p.rootCRL(t, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.RevokeCA(ctx, "admin", p.a, ca.ReasonCACompromise); err != nil {
+		t.Fatal(err)
+	}
+	// Clients cannot learn of the revocation yet, so the key stays.
+	if err := s.RemoveKey(ctx, "admin", p.a); !errors.Is(err, ErrRevocationNotPublished) {
+		t.Fatalf("revoked but not published: %v", err)
+	}
+	if c, _ := s.GetCA(ctx, p.a); c.KeyBlob == nil {
+		t.Fatal("the key must still be there after a refusal")
+	}
+
+	// Publishing the Root's CRL that lists A opens the way. The sibling is untouched.
+	p.clk.Add(time.Minute)
+	if _, err := s.ImportRootCRL(ctx, "admin", p.rootID, p.rootCRL(t, 2, p.certA)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RemoveKey(ctx, "admin", p.a); err != nil {
+		t.Fatalf("destroy: %v", err)
+	}
+	if c, _ := s.GetCA(ctx, p.a); c.KeyBlob != nil || !c.Revoked() || len(c.CertPEM) == 0 {
+		t.Fatalf("the key is gone, the certificate and the revocation stay: %+v", c)
+	}
+	if b, _ := s.GetCA(ctx, p.b); b.KeyBlob == nil {
+		t.Fatal("the sibling lost its key")
+	}
+	if _, err := s.IssueCertificate(ctx, "ops", p.b, leafReq("still.lab")); err != nil {
+		t.Fatalf("the sibling must still issue: %v", err)
+	}
+	if _, err := s.IssueCertificate(ctx, "ops", p.a, leafReq("never.lab")); !errors.Is(err, ErrCARevoked) {
+		t.Fatalf("a revoked CA without a key issues nothing: %v", err)
+	}
+	// Doing it again has nothing left to destroy.
+	if err := s.RemoveKey(ctx, "admin", p.a); !errors.Is(err, ErrKeyOffline) {
+		t.Fatalf("second time: %v", err)
+	}
+	// The CRL job copes with a keyless, revoked CA.
+	if err := s.RefreshCRLs(ctx, "system", true); err != nil {
+		t.Fatalf("refresh: %v", err)
+	}
+
+	entries, _ := s.Audit(ctx, 20)
+	var found bool
+	for _, e := range entries {
+		if e.Action == "ca.drop_key" && e.Target == p.a && strings.Contains(e.Detail, "number 2") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("the destruction must be audited with the CRL that allowed it: %+v", entries)
+	}
+}
+
+func TestRemoveKeyOnARootKeepsWorking(t *testing.T) {
+	s, _, _ := newPKI(t)
+	rootID, err := s.CreateRoot(ctx, "admin", caParams("Lab Root", 10*year, ca.ECDSAP256))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RemoveKey(ctx, "admin", rootID); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RemoveKey(ctx, "admin", rootID); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("a Root whose key is already gone: %v", err)
+	}
+}
