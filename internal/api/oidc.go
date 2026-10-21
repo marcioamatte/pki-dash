@@ -56,7 +56,7 @@ func (s *Server) oidcCallback(w http.ResponseWriter, r *http.Request, _ *auth.Se
 	}
 	s.setOIDCCookie(w, "", -1) // single use
 	fail := func(err error) error {
-		s.log.Warn("oidc: login refused", "err", err, "ip", clientIP(r))
+		s.log.Warn("oidc: login refused", "err", err, "ip", s.clientIP(r))
 		http.Redirect(w, r, oidcErrorPath+oidcCode(err), http.StatusFound)
 		return nil
 	}

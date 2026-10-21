@@ -30,11 +30,46 @@ The server refuses to start until you choose, explicitly, how it is reached:
 |---|---|
 | `-tls-cert FILE -tls-key FILE` | Your certificate. The normal choice. |
 | `-tls-self-signed` | A throwaway certificate, for labs. |
-| `-insecure-http` | Plain HTTP, for local development only. Cookies are not marked `Secure` and HSTS is off. |
+| `-insecure-http` | Plain HTTP: local development, or behind a reverse proxy (see below). On its own, cookies are not marked `Secure` and HSTS is off. |
 
-Terminating TLS in a reverse proxy in front of pki-dash is **not supported yet**: the rate limiter keys on the connecting address, so every user would share the proxy's address, and forwarded headers are deliberately ignored until trusted-proxy support exists. Serve TLS from pki-dash itself.
+## Behind a reverse proxy
 
-Environment variables (flags win): `PKI_DASH_DATA_DIR` (default `/data` in the image), `PKI_DASH_LISTEN` (default `0.0.0.0:8443` in the image), `PKI_DASH_TLS_CERT`, `PKI_DASH_TLS_KEY`.
+You can put pki-dash behind a proxy that terminates TLS (nginx, Traefik, Caddy, HAProxy...). Tell pki-dash which proxies to believe:
+
+```bash
+pki-dash -insecure-http -listen 172.17.0.1:8080 -trusted-proxies 172.17.0.2
+```
+
+`-trusted-proxies` (`PKI_DASH_TRUSTED_PROXIES`) takes addresses and CIDR ranges, separated by commas. What changes:
+
+- **The client's address** is read from `X-Forwarded-For`, but only on connections that come from a listed proxy, and reading from the right: the first address that is not itself a listed proxy. Entries a client put on the left of the header are never used, so nobody can pick the address they are rate-limited and logged under. From any other connection the header is ignored.
+- **Sessions are always `Secure`** (with the `__Host-` cookie name and HSTS), because the browser speaks https even though the listener behind the proxy may not. That is why `-insecure-http` is the normal companion of this option here: the plain listener is for the proxy alone, so bind it to an address only the proxy can reach.
+- **The cross-origin check** compares the browser's `Origin` with the host the browser used, taken from `X-Forwarded-Host` when it comes from a listed proxy.
+- A listed proxy that reports `X-Forwarded-Proto: http` is answered with an explanatory error instead of letting login fail silently.
+- A range that would trust every address (`0.0.0.0/0`, `::/0`) is refused at start-up.
+
+The proxy must send `X-Forwarded-For` (appending, not replacing: `$proxy_add_x_forwarded_for` in nginx), `X-Forwarded-Proto` and, if it changes the `Host` header, `X-Forwarded-Host`. This is the nginx configuration it was tested with:
+
+```nginx
+server {
+    listen 8443 ssl;
+    ssl_certificate     /etc/nginx/tls.crt;
+    ssl_certificate_key /etc/nginx/tls.key;
+    location / {
+        proxy_pass http://172.17.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Traefik and Caddy add these headers on their own; check that yours do. For sign-in with Keycloak, `-external-url` is the address of the **proxy**, as the browser sees it.
+
+**List only the proxy itself, not the networks your users sit in.** If a client's own address falls inside a listed range, that client counts as a proxy and its forged headers would be believed. A proxy on the same machine as the browser is the typical way to get this wrong in a test: `127.0.0.1` would then be both.
+
+Environment variables (flags win): `PKI_DASH_DATA_DIR` (default `/data` in the image), `PKI_DASH_LISTEN` (default `0.0.0.0:8443` in the image), `PKI_DASH_TLS_CERT`, `PKI_DASH_TLS_KEY`, `PKI_DASH_TRUSTED_PROXIES`.
 
 To let people sign in through Keycloak or another OpenID Connect provider, see [Signing in with Keycloak](05-sso-keycloak.md). It adds options of its own (`-external-url`, `-oidc-*`).
 

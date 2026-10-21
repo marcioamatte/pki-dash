@@ -68,6 +68,7 @@ func run(ctx context.Context, args []string) error {
 	publicURL := fs.String("public-url", env("PKI_DASH_PUBLIC_URL", ""), "how clients reach that listener, e.g. http://pki.lab:8080; written into issued certificates (env PKI_DASH_PUBLIC_URL)")
 	var o oidcFlags
 	o.register(fs)
+	proxies := fs.String("trusted-proxies", env("PKI_DASH_TRUSTED_PROXIES", ""), "comma-separated addresses or CIDR ranges of the reverse proxies in front of pki-dash, e.g. 10.0.0.5,172.18.0.0/16; their X-Forwarded-* headers are believed, and sessions are always marked Secure (env PKI_DASH_TRUSTED_PROXIES)")
 	showVersion := fs.Bool("version", false, "print the version and exit")
 	insecure := fs.Bool("insecure-http", false, "serve plain HTTP: development, or behind a TLS-terminating proxy you trust")
 	if err := fs.Parse(args); err != nil {
@@ -94,6 +95,14 @@ func run(ctx context.Context, args []string) error {
 	case (*certFile == "") != (*keyFile == ""):
 		return errors.New("-tls-cert and -tls-key must be given together")
 	}
+
+	trusted, err := api.ParseTrustedProxies(*proxies)
+	if err != nil {
+		return fmt.Errorf("-trusted-proxies: %w", err)
+	}
+	// Behind a proxy that terminates TLS the browser speaks https even though
+	// this listener may not: sessions must be Secure all the same.
+	behindProxy := len(trusted) > 0
 
 	base, err := service.NormalizePublicURL(*publicURL)
 	if err != nil {
@@ -146,7 +155,7 @@ func run(ctx context.Context, args []string) error {
 
 	srv := api.New(api.Options{
 		Service: svc, Auth: au, Logger: log,
-		SecureCookies: !*insecure, SetupToken: setupToken, UI: web.Dist(),
+		SecureCookies: !*insecure || behindProxy, TrustedProxies: trusted, SetupToken: setupToken, UI: web.Dist(),
 		OIDC: oidcProv, OIDCName: o.name,
 	})
 	httpSrv := &http.Server{
@@ -216,7 +225,11 @@ func run(ctx context.Context, args []string) error {
 	go func() {
 		switch {
 		case *insecure:
-			log.Warn("serving plain HTTP: do not expose this port beyond a trusted network", "addr", *listen)
+			if behindProxy {
+				log.Info("serving plain HTTP to trusted reverse proxies only: TLS is terminated by the proxy", "addr", *listen, "trusted_proxies", *proxies)
+			} else {
+				log.Warn("serving plain HTTP: do not expose this port beyond a trusted network", "addr", *listen)
+			}
 			errc <- httpSrv.ListenAndServe()
 		case *selfSigned:
 			cert, fp, err := selfSignedCert()

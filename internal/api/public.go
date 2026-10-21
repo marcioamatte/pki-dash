@@ -63,9 +63,9 @@ func (s *Server) wrapPublic(next http.Handler) http.Handler {
 				}
 			}
 			s.log.Info("public request", "method", r.Method, "path", r.URL.Path, "status", rec.status,
-				"duration_ms", time.Since(start).Milliseconds(), "ip", clientIP(r))
+				"duration_ms", time.Since(start).Milliseconds(), "ip", s.clientIP(r))
 		}()
-		if !s.public.allow(clientIP(r)) {
+		if !s.public.allow(s.clientIP(r)) {
 			rec.Header().Set("Retry-After", "10")
 			http.Error(rec, "too many requests", http.StatusTooManyRequests)
 			return

@@ -14,6 +14,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
@@ -39,6 +40,9 @@ type Options struct {
 	// label the login button shows.
 	OIDC     *oidc.Provider
 	OIDCName string
+	// TrustedProxies are the reverse proxies whose X-Forwarded-* headers are
+	// believed (see proxy.go). Empty means no proxy is trusted.
+	TrustedProxies []netip.Prefix
 	// UI is the built frontend, served at / and /assets/. Nil serves the API only.
 	UI fs.FS
 	// Now overrides the clock, for tests.
@@ -54,6 +58,7 @@ type Server struct {
 	setupToken string
 	ui         fs.FS
 	oidc       *oidc.Provider
+	proxies    []netip.Prefix
 	oidcName   string
 	general    *limiter
 	public     *limiter
@@ -69,7 +74,7 @@ func New(o Options) *Server {
 		o.Now = time.Now
 	}
 	return &Server{
-		svc: o.Service, auth: o.Auth, log: o.Logger, secure: o.SecureCookies, setupToken: o.SetupToken, ui: o.UI, oidc: o.OIDC, oidcName: o.OIDCName,
+		svc: o.Service, auth: o.Auth, log: o.Logger, secure: o.SecureCookies, setupToken: o.SetupToken, ui: o.UI, oidc: o.OIDC, oidcName: o.OIDCName, proxies: o.TrustedProxies,
 		general: newLimiter(30, 120, o.Now),   // 30 req/s sustained, bursts of 120
 		public:  newLimiter(20, 100, o.Now),   // the public listener, per address
 		strict:  newLimiter(1.0/6, 10, o.Now), // 10 per minute sustained, bursts of 10
@@ -111,12 +116,12 @@ func (s *Server) handle(mux *http.ServeMux, pattern string, rt route, h handlerF
 		if rt.strict {
 			lim = s.strict
 		}
-		if !lim.allow(clientIP(r)) {
+		if !lim.allow(s.clientIP(r)) {
 			w.Header().Set("Retry-After", "10")
 			writeErr(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
 			return
 		}
-		if unsafeMethod(r.Method) && !sameOrigin(r) {
+		if unsafeMethod(r.Method) && !s.sameOrigin(r) {
 			writeErr(w, http.StatusForbidden, "bad_origin", "cross-origin request refused")
 			return
 		}
@@ -149,16 +154,18 @@ func unsafeMethod(m string) bool {
 	return m != http.MethodGet && m != http.MethodHead && m != http.MethodOptions
 }
 
-// sameOrigin rejects browser requests that come from another origin. Requests
+// sameOrigin rejects browser requests that come from another origin (the host
+// is the one the browser used, which behind a trusted proxy may differ from
+// the Host header the proxy sends on). Requests
 // without an Origin header (non-browser clients) pass; they still need the
 // CSRF token, which a cross-site page cannot read.
-func sameOrigin(r *http.Request) bool {
+func (s *Server) sameOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
 		return true
 	}
 	u, err := url.Parse(origin)
-	return err == nil && u.Host == r.Host
+	return err == nil && u.Host == s.requestHost(r)
 }
 
 func validCSRF(r *http.Request, p *auth.Session) bool {
@@ -227,8 +234,13 @@ func (s *Server) wrap(next http.Handler) http.Handler {
 				}
 			}
 			s.log.Info("request", "method", r.Method, "path", r.URL.Path, "status", rec.status,
-				"duration_ms", time.Since(start).Milliseconds(), "ip", clientIP(r), "request_id", id)
+				"duration_ms", time.Since(start).Milliseconds(), "ip", s.clientIP(r), "request_id", id)
 		}()
+		if s.forwardedPlain(r) {
+			writeErr(rec, http.StatusBadRequest, "proxy_plain_http",
+				"the proxy forwarded this request as plain http, but sessions need https: make the proxy set X-Forwarded-Proto: https")
+			return
+		}
 		next.ServeHTTP(rec, r)
 	})
 }

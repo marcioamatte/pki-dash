@@ -1,8 +1,6 @@
 package api
 
 import (
-	"net"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -63,15 +61,4 @@ func (l *limiter) sweep(now time.Time) {
 			delete(l.buckets, k)
 		}
 	}
-}
-
-// clientIP is the peer address. Forwarded headers are deliberately ignored:
-// they are attacker-controlled unless a trusted proxy sets them, and there is
-// no proxy support yet.
-func clientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }
