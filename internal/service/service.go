@@ -363,6 +363,9 @@ func (s *Service) IssueCertificate(ctx context.Context, actor, caID string, r ca
 	if issuer.Kind == store.KindRoot {
 		return nil, ErrIssueFromRoot
 	}
+	if issuer.Revoked() {
+		return nil, ErrCARevoked
+	}
 	auth, err := s.authority(v, issuer)
 	if err != nil {
 		return nil, err

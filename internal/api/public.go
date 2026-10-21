@@ -90,9 +90,9 @@ func (s *Server) publicFile(kind string) http.HandlerFunc {
 		)
 		switch kind {
 		case "crl":
-			var crl store.CRL
+			var crl store.PublishedCRL
 			if crl, err = s.svc.PublicCRL(r.Context(), m[1]); err == nil {
-				der, modified, ctype, maxAge = crl.DER, crl.GeneratedAt, "application/pkix-crl", "max-age=300"
+				der, modified, ctype, maxAge = crl.DER, crl.ModifiedAt, "application/pkix-crl", "max-age=300"
 			}
 		default:
 			if der, err = s.svc.PublicCACertificate(r.Context(), m[1]); err == nil {

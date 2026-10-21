@@ -10,6 +10,7 @@ const (
 	PermViewCerts          Permission = "cert.view"
 	PermIssueCert          Permission = "cert.issue"
 	PermRevokeCert         Permission = "cert.revoke"
+	PermRevokeCA           Permission = "ca.revoke"
 	PermCreateIntermediate Permission = "ca.create_intermediate"
 	PermCreateRoot         Permission = "ca.create_root"
 	PermExportCAKey        Permission = "ca.export_key"
@@ -27,7 +28,7 @@ var rolePerms = map[string][]Permission{
 	store.RoleViewer:   viewer,
 	store.RoleOperator: append(append([]Permission{}, viewer...), PermIssueCert, PermRevokeCert),
 	store.RoleAdmin: {
-		PermViewCAs, PermViewCerts, PermIssueCert, PermRevokeCert, PermCreateIntermediate, PermCreateRoot,
+		PermViewCAs, PermViewCerts, PermIssueCert, PermRevokeCert, PermRevokeCA, PermCreateIntermediate, PermCreateRoot,
 		PermExportCAKey, PermRemoveRootKey, PermManageVault, PermManageUsers, PermViewAudit,
 	},
 }

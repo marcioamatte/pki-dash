@@ -52,6 +52,8 @@ A Root é a âncora de confiança de tudo abaixo dela, então o lugar mais segur
      -days 1825 -sha384 -extfile inter.ext -out inter.crt
    ```
 
+   > **Revogação:** se você quer que os clientes possam checar a intermediária contra a CRL da Root depois, inclua o endereço dela agora (`crl_url` e `issuer_urls` no perfil do cfssl, ou `crlDistributionPoints` e `authorityInfoAccess` nas extensões do openssl). Veja [Revogando uma CA intermediária](04-revocation_pt-BR.md#revogando-uma-ca-intermediária).
+
 4. **Importe o certificado assinado** (`POST /api/v1/intermediate-requests/{id}/import`). A partir daí a intermediária se comporta como qualquer outra: emite certificados de serviço, e eles verificam contra a Root que você nunca deu ao serviço.
 
 ## Na interface web

@@ -83,7 +83,7 @@ func (s *Service) RevokeCertificate(ctx context.Context, actor, certID string, r
 	res := RevokeResult{Certificate: c}
 	if _, err := s.refreshCRL(ctx, actor, c.CAID); err == nil {
 		res.Published = true
-	} else if !errors.Is(err, ErrLocked) && !errors.Is(err, ErrNotCRLSigner) {
+	} else if !errors.Is(err, ErrLocked) && !errors.Is(err, ErrNotCRLSigner) && !errors.Is(err, ErrCARevoked) {
 		return res, err
 	}
 	return res, nil
@@ -98,6 +98,9 @@ func (s *Service) refreshCRL(ctx context.Context, actor, caID string) (store.CRL
 	c, err := s.st.GetCA(ctx, caID)
 	if err != nil {
 		return store.CRL{}, err
+	}
+	if c.Revoked() {
+		return store.CRL{}, ErrCARevoked // a revoked CA's key signs nothing more
 	}
 	auth, err := s.authority(v, c)
 	if err != nil {
@@ -131,7 +134,7 @@ func (s *Service) RefreshCRLs(ctx context.Context, actor string, force bool) err
 	}
 	var errs []error
 	for _, c := range cas {
-		if c.Kind != store.KindIntermediate || c.KeyBlob == nil || !canSignCRL(c) {
+		if c.Kind != store.KindIntermediate || c.KeyBlob == nil || c.Revoked() || !canSignCRL(c) {
 			continue
 		}
 		due, err := s.crlDue(ctx, c.ID, force)
@@ -170,8 +173,11 @@ func (s *Service) crlDue(ctx context.Context, caID string, force bool) (bool, er
 // CRLInfo describes the revocation list of one CA, for the dashboard.
 type CRLInfo struct {
 	CAID, CAName string
-	KeyHeld      bool // the service holds the key, so it can sign
-	CanSign      bool // the CA certificate allows signing CRLs
+	Kind         string // "intermediate" (this service signs it) or "root" (signed offline and imported)
+	CARevoked    bool   // the CA itself is revoked
+	External     bool   // the list is made elsewhere and imported
+	KeyHeld      bool   // the service holds the key, so it can sign
+	CanSign      bool   // the CA certificate allows signing CRLs
 	Published    bool
 	Number       int64
 	ThisUpdate   time.Time
@@ -182,7 +188,8 @@ type CRLInfo struct {
 	Expired      bool // the published CRL is past its nextUpdate: clients that check will refuse
 }
 
-// CRLStatus reports on every intermediate's CRL.
+// CRLStatus reports on the revocation lists: each intermediate's, and a Root's
+// when it has revoked intermediates to account for or a list already imported.
 func (s *Service) CRLStatus(ctx context.Context) ([]CRLInfo, error) {
 	cas, err := s.st.ListCAs(ctx)
 	if err != nil {
@@ -190,32 +197,77 @@ func (s *Service) CRLStatus(ctx context.Context) ([]CRLInfo, error) {
 	}
 	var out []CRLInfo
 	for _, c := range cas {
-		if c.Kind != store.KindIntermediate {
-			continue
+		switch c.Kind {
+		case store.KindIntermediate:
+			info := CRLInfo{CAID: c.ID, CAName: c.Name, Kind: c.Kind, CARevoked: c.Revoked(), KeyHeld: c.KeyBlob != nil, CanSign: canSignCRL(c)}
+			if info.Revoked, err = s.st.RevokedCount(ctx, c.ID); err != nil {
+				return nil, err
+			}
+			switch crl, err := s.st.GetCRL(ctx, c.ID); {
+			case err == nil:
+				info.Published, info.Number = true, crl.Number
+				info.ThisUpdate, info.NextUpdate, info.InList = crl.ThisUpdate, crl.NextUpdate, crl.RevokedCount
+				info.Stale = info.Revoked != crl.RevokedCount && !c.Revoked()
+				info.Expired = !s.opts.Now().Before(crl.NextUpdate) && !c.Revoked()
+			case !errors.Is(err, store.ErrNotFound):
+				return nil, err
+			}
+			out = append(out, info)
+		case store.KindRoot:
+			info, include, err := s.rootCRLInfo(ctx, c)
+			if err != nil {
+				return nil, err
+			}
+			if include {
+				out = append(out, info)
+			}
 		}
-		info := CRLInfo{CAID: c.ID, CAName: c.Name, KeyHeld: c.KeyBlob != nil, CanSign: canSignCRL(c)}
-		if info.Revoked, err = s.st.RevokedCount(ctx, c.ID); err != nil {
-			return nil, err
-		}
-		switch crl, err := s.st.GetCRL(ctx, c.ID); {
-		case err == nil:
-			info.Published, info.Number = true, crl.Number
-			info.ThisUpdate, info.NextUpdate, info.InList = crl.ThisUpdate, crl.NextUpdate, crl.RevokedCount
-			info.Stale = info.Revoked != crl.RevokedCount
-			info.Expired = !s.opts.Now().Before(crl.NextUpdate)
-		case !errors.Is(err, store.ErrNotFound):
-			return nil, err
-		}
-		out = append(out, info)
 	}
 	return out, nil
 }
 
-// PublicCRL returns a CA's published CRL in DER form, as served to clients.
-func (s *Service) PublicCRL(ctx context.Context, caID string) (store.CRL, error) {
-	crl, err := s.st.GetCRL(ctx, caID)
+// rootCRLInfo describes a Root's list. Roots appear only once there is
+// something to say: an intermediate was revoked, or a list was imported.
+func (s *Service) rootCRLInfo(ctx context.Context, root store.CA) (CRLInfo, bool, error) {
+	kids, err := s.st.Children(ctx, root.ID)
+	if err != nil {
+		return CRLInfo{}, false, err
+	}
+	var serials []*big.Int
+	for _, k := range kids {
+		if k.Revoked() {
+			sn, err := serialOf(k)
+			if err != nil {
+				return CRLInfo{}, false, err
+			}
+			serials = append(serials, sn)
+		}
+	}
+	info := CRLInfo{CAID: root.ID, CAName: root.Name, Kind: root.Kind, External: true, KeyHeld: root.KeyBlob != nil, Revoked: len(serials)}
+	switch imp, err := s.st.GetImportedCRL(ctx, root.ID); {
+	case err == nil:
+		info.Published, info.Number = true, imp.Number
+		info.ThisUpdate, info.NextUpdate = imp.ThisUpdate, imp.NextUpdate
+		info.InList = listedInCRL(imp.DER, serials)
+		info.Stale = info.InList < info.Revoked
+		info.Expired = !s.opts.Now().Before(imp.NextUpdate)
+	case errors.Is(err, store.ErrNotFound):
+		if len(serials) == 0 {
+			return info, false, nil
+		}
+	default:
+		return CRLInfo{}, false, err
+	}
+	return info, true, nil
+}
+
+// PublicCRL returns the list published for a CA in DER form, as served to
+// clients: the one this service signed for an intermediate, or the one imported
+// for a Root.
+func (s *Service) PublicCRL(ctx context.Context, caID string) (store.PublishedCRL, error) {
+	crl, err := s.st.GetPublishedCRL(ctx, caID)
 	if errors.Is(err, store.ErrNotFound) {
-		return store.CRL{}, ErrNoCRL
+		return store.PublishedCRL{}, ErrNoCRL
 	}
 	return crl, err
 }

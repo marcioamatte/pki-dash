@@ -316,6 +316,7 @@ func TestProtectedRoutesRequireLogin(t *testing.T) {
 		"GET /api/v1/cas", "POST /api/v1/cas", "GET /api/v1/cas/x", "GET /api/v1/cas/x/cert", "GET /api/v1/cas/x/chain",
 		"POST /api/v1/cas/import-root", "POST /api/v1/cas/x/intermediate-requests", "GET /api/v1/intermediate-requests",
 		"GET /api/v1/intermediate-requests/x/csr", "POST /api/v1/intermediate-requests/x/import", "DELETE /api/v1/intermediate-requests/x",
+		"POST /api/v1/cas/x/revoke", "GET /api/v1/cas/x/crl-request", "POST /api/v1/cas/x/crl/import", "GET /api/v1/config",
 		"POST /api/v1/certificates/x/revoke", "GET /api/v1/crls", "POST /api/v1/crls/refresh", "GET /api/v1/cas/x/crl",
 		"POST /api/v1/cas/x/export-key", "POST /api/v1/cas/x/remove-key", "POST /api/v1/cas/x/certificates",
 		"GET /api/v1/certificates", "GET /api/v1/certificates/expiring", "GET /api/v1/certificates/x/pem", "GET /api/v1/certificates/x/fullchain",

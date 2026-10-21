@@ -64,9 +64,86 @@ Seja realista sobre isso. **Navegadores, em geral, não baixam CRLs de CAs priva
 
 Use para mTLS e para serviços que você opera. Não espere que ela faça um certificado de servidor revogado sumir de todos os navegadores.
 
+## Revogando uma CA intermediária
+
+Uma intermediária é revogada pela **Root dela**, e a Root fica offline. Por isso são duas metades: o painel registra a revogação e para de usar a CA na hora, e **você** traz de volta uma CRL que a Root assinou, que o painel então publica em nome da Root.
+
+1. **Revogue** a intermediária (somente admins; `POST /api/v1/cas/{id}/revoke`, motivos como para certificados mais `ca_compromise`). A partir daí o serviço **se recusa a emitir** por ela e **não assina mais CRLs** com a chave dela. A revogação é definitiva. Os certificados que ela já emitiu não aparecem em lista nenhuma até a CRL da Root dizer que a própria CA foi revogada, e nesse momento os clientes rejeitam a cadeia inteira.
+2. **Peça o que a CRL da Root precisa conter** (`GET /api/v1/cas/{root}/crl-request`): as intermediárias revogadas com seus números de série (hex e decimal) e o número a dar à CRL.
+3. **Na máquina da Root, gere uma CRL completa** com qualquer uma das ferramentas (as duas foram testadas):
+
+   **cfssl**: coloque as séries em decimal, uma por linha, em `serials.txt`:
+
+   ```bash
+   cfssl gencrl serials.txt root.pem root-key.pem 15552000 > root-crl.b64     # 15552000 s = 180 dias
+   ```
+
+   A saída é o base64 do DER, que o importador aceita como está. O cfssl não escreve número de CRL nem código de motivo, e data a lista até o segundo.
+
+   **openssl**: precisa de um pequeno banco de CA. Uma linha por intermediária revogada em `index.txt` (separada por tabs; série em hex maiúsculo com número par de dígitos; datas como `YYMMDDHHMMSSZ`), o número em `crlnumber` e um `ca.cnf`:
+
+   ```ini
+   # index.txt  (campos separados por TAB)
+   R	351021000000Z	261021025553Z,CACompromise	3BF66B5E5E2E0AD23554366822BEA765B04AA08E	unknown	/CN=Inter A
+
+   # crlnumber
+   01
+
+   # ca.cnf
+   [ca]
+   default_ca = CA_default
+   [CA_default]
+   database = index.txt
+   crlnumber = crlnumber
+   certificate = root.pem
+   private_key = root-key.pem
+   default_md = sha384
+   default_crl_days = 180
+   ```
+
+   ```bash
+   openssl ca -config ca.cnf -gencrl -out root-crl.pem
+   ```
+
+   A lista do openssl leva o número da CRL e o motivo, então prefira-a se puder.
+4. **Importe-a** (`POST /api/v1/cas/{root}/crl/import`, PEM, DER ou o base64 do cfssl). O painel a serve no `/crl/<id-da-root>.crl` da Root.
+
+### O que a importação confere
+
+Ela é publicada em nome da Root, então é conferida antes:
+
+- assinada pela **chave desta Root** e emitida pelo nome dela;
+- uma lista **completa**: CRLs delta e parciais são recusadas;
+- atual: não expirada, não datada no futuro;
+- **mais nova que a já publicada**, para que uma lista antiga não possa ser recolocada e desfazer revogações em silêncio. Com número de CRL nos dois lados, o número precisa crescer; senão (cfssl), a data precisa ser estritamente posterior, o que uma máquina da Root com relógio errado pode atrapalhar: acerte o relógio e gere de novo;
+- **consistente com este painel**: ela precisa listar toda intermediária revogada aqui, e nenhuma que não esteja (revogue-a aqui primeiro).
+
+Uma recusa explica o motivo e não muda nada.
+
+### Faça as intermediárias apontarem para a lista da Root
+
+Os clientes só conseguem checar uma intermediária se o certificado dela disser onde está a CRL da Root. Inclua isso ao **assinar** uma intermediária (as receitas de [Mantendo a Root offline](03-offline-root_pt-BR.md) usam os mesmos arquivos):
+
+```json
+"crl_url": "http://pki.lab:8080/crl/<id-da-root>.crl",
+"issuer_urls": ["http://pki.lab:8080/ca/<id-da-root>.crt"],
+```
+(no perfil do cfssl, ao lado de `usages`), ou no arquivo de extensões do openssl:
+
+```ini
+crlDistributionPoints = URI:http://pki.lab:8080/crl/<id-da-root>.crl
+authorityInfoAccess = caIssuers;URI:http://pki.lab:8080/ca/<id-da-root>.crt
+```
+
+`<id-da-root>` é o id da Root, como nos endereços que o painel mostra. **Intermediárias assinadas antes disso não trazem esse endereço**: os clientes não conseguem descobrir a lista da Root para elas (assine-as de novo se quiser isso).
+
+### A lista da Root também expira
+
+Clientes rigorosos recusam uma cadeia cuja CRL expirou. Uma Root que quase nunca é ligada precisa, portanto, publicar uma lista com **validade longa** (os comandos acima usam 180 dias) e **renová-la antes de acabar**, mesmo sem mudança. O painel mostra a lista da Root como *Expirada* e avisa. Publique uma lista vazia assim que as intermediárias apontarem para a Root.
+
 ## Limites
 
 - **Ainda sem OCSP.** Somente CRL.
-- **Intermediárias ainda não podem ser revogadas.** Essa lista precisa ser assinada pela Root, que fica offline; isso vem na próxima mudança.
+- Uma Root não pode ser revogada: nada acima dela poderia assinar a declaração. Para aposentar uma, remova-a dos hosts que confiam nela.
 - Uma CA só publica CRL se o certificado dela tiver o uso de chave **cRLSign**. As intermediárias feitas pelo pki-dash ou pelas receitas documentadas de cfssl/openssl têm. Se você importar uma sem ele, os certificados que ela emitir não trazem endereço de CRL (um aviso informa isso) e as revogações são registradas, mas não podem ser publicadas.
 - Os clientes guardam a CRL em cache até ela expirar ou ser substituída, então a revogação chega a eles no próximo refresh, não instantaneamente.

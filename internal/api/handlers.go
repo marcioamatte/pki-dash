@@ -60,6 +60,10 @@ func (s *Server) routes(mux *http.ServeMux) {
 	s.handle(mux, "GET "+v1+"/certificates/{id}/fullchain", route{perm: auth.PermViewCerts}, s.certFullchain)
 
 	s.handle(mux, "POST "+v1+"/certificates/{id}/revoke", route{perm: auth.PermRevokeCert}, s.revoke)
+	s.handle(mux, "POST "+v1+"/cas/{id}/revoke", route{perm: auth.PermRevokeCA}, s.revokeCA)
+	s.handle(mux, "GET "+v1+"/cas/{id}/crl-request", route{perm: auth.PermRevokeCA}, s.rootCRLRequest)
+	s.handle(mux, "POST "+v1+"/cas/{id}/crl/import", route{perm: auth.PermRevokeCA}, s.importRootCRL)
+	s.handle(mux, "GET "+v1+"/config", any, s.config)
 	s.handle(mux, "GET "+v1+"/crls", route{perm: auth.PermViewCAs}, s.crlStatus)
 	s.handle(mux, "POST "+v1+"/crls/refresh", route{perm: auth.PermRevokeCert}, s.crlRefresh)
 	s.handle(mux, "GET "+v1+"/cas/{id}/crl", route{perm: auth.PermViewCAs}, s.crlDownload)

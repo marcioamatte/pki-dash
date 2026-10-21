@@ -43,7 +43,8 @@ type Revoked struct {
 // CRLValidity is how long a CRL stays valid, from the moment it is issued.
 const CRLValidity = 7 * 24 * time.Hour
 
-// IssueCRL signs a revocation list for the CA's certificates. number must grow
+// IssueCRL signs a revocation list for the CA's certificates. Reasons may be any
+// that suit what the CA issues: a Root's list names CAs, so cACompromise is allowed here. number must grow
 // with each list the CA publishes (RFC 5280 section 5.2.3). The list is valid
 // from slightly before now, to absorb clock differences, until now+validity.
 func (a *Authority) IssueCRL(entries []Revoked, number int64, now time.Time, validity time.Duration) (der []byte, thisUpdate, nextUpdate time.Time, err error) {
@@ -56,7 +57,7 @@ func (a *Authority) IssueCRL(entries []Revoked, number int64, now time.Time, val
 	thisUpdate, nextUpdate = now.Add(-backdate).UTC(), now.Add(validity).UTC()
 	list := make([]x509.RevocationListEntry, 0, len(entries))
 	for _, e := range entries {
-		if e.Serial == nil || e.Serial.Sign() <= 0 || !ValidReason(e.Reason) {
+		if e.Serial == nil || e.Serial.Sign() <= 0 || !ValidCAReason(e.Reason) {
 			return nil, thisUpdate, nextUpdate, fmt.Errorf("%w: bad CRL entry", ErrInvalidRequest)
 		}
 		list = append(list, x509.RevocationListEntry{SerialNumber: e.Serial, RevocationTime: e.RevokedAt.UTC(), ReasonCode: e.Reason})
