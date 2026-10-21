@@ -52,7 +52,7 @@ func newEnv(t *testing.T, secure bool, mods ...func(*Options)) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
-	svc := service.New(st, service.Options{KDF: vault.Params{Time: 2, Memory: 19 * 1024, Threads: 1}})
+	svc := service.New(st, service.Options{KDF: vault.Params{Time: 2, Memory: 19 * 1024, Threads: 1}, PublicURL: "http://pki.test:8080"})
 	au, err := auth.New(st, auth.Options{Password: auth.PasswordParams{Time: 2, Memory: 19 * 1024, Threads: 1}})
 	if err != nil {
 		t.Fatal(err)
@@ -316,6 +316,7 @@ func TestProtectedRoutesRequireLogin(t *testing.T) {
 		"GET /api/v1/cas", "POST /api/v1/cas", "GET /api/v1/cas/x", "GET /api/v1/cas/x/cert", "GET /api/v1/cas/x/chain",
 		"POST /api/v1/cas/import-root", "POST /api/v1/cas/x/intermediate-requests", "GET /api/v1/intermediate-requests",
 		"GET /api/v1/intermediate-requests/x/csr", "POST /api/v1/intermediate-requests/x/import", "DELETE /api/v1/intermediate-requests/x",
+		"POST /api/v1/certificates/x/revoke", "GET /api/v1/crls", "POST /api/v1/crls/refresh", "GET /api/v1/cas/x/crl",
 		"POST /api/v1/cas/x/export-key", "POST /api/v1/cas/x/remove-key", "POST /api/v1/cas/x/certificates",
 		"GET /api/v1/certificates", "GET /api/v1/certificates/expiring", "GET /api/v1/certificates/x/pem", "GET /api/v1/certificates/x/fullchain",
 		"GET /api/v1/users", "POST /api/v1/users", "PATCH /api/v1/users/x", "POST /api/v1/users/x/password",

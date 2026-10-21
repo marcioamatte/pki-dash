@@ -59,6 +59,11 @@ func (s *Server) routes(mux *http.ServeMux) {
 	s.handle(mux, "GET "+v1+"/certificates/{id}/pem", route{perm: auth.PermViewCerts}, s.certPEM)
 	s.handle(mux, "GET "+v1+"/certificates/{id}/fullchain", route{perm: auth.PermViewCerts}, s.certFullchain)
 
+	s.handle(mux, "POST "+v1+"/certificates/{id}/revoke", route{perm: auth.PermRevokeCert}, s.revoke)
+	s.handle(mux, "GET "+v1+"/crls", route{perm: auth.PermViewCAs}, s.crlStatus)
+	s.handle(mux, "POST "+v1+"/crls/refresh", route{perm: auth.PermRevokeCert}, s.crlRefresh)
+	s.handle(mux, "GET "+v1+"/cas/{id}/crl", route{perm: auth.PermViewCAs}, s.crlDownload)
+
 	s.handle(mux, "GET "+v1+"/users", route{perm: auth.PermManageUsers}, s.listUsers)
 	s.handle(mux, "POST "+v1+"/users", route{perm: auth.PermManageUsers}, s.createUser)
 	s.handle(mux, "PATCH "+v1+"/users/{id}", route{perm: auth.PermManageUsers}, s.patchUser)

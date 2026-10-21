@@ -15,7 +15,7 @@ COPY web/ ./
 RUN npm run check && npm test && npm run build
 
 # ---- 2. build the Go binary, with the UI embedded -----------------------------
-FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS build
+FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
@@ -40,7 +40,7 @@ USER 65532:65532
 ENV PKI_DASH_DATA_DIR=/data \
     PKI_DASH_LISTEN=0.0.0.0:8443
 VOLUME /data
-EXPOSE 8443
+EXPOSE 8443 8080
 # No default command on purpose: the server will not start until the operator
 # chooses how it is served (-tls-cert/-tls-key, -tls-self-signed or -insecure-http).
 ENTRYPOINT ["/pki-dash"]

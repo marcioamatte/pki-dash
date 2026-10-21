@@ -87,6 +87,10 @@ func mapError(w http.ResponseWriter, r *http.Request, log *slog.Logger, err erro
 		writeErr(w, http.StatusConflict, "key_offline", "this CA's private key is not held by the service")
 	case errors.Is(err, store.ErrNotFound):
 		writeErr(w, http.StatusNotFound, "not_found", "not found")
+	case errors.Is(err, service.ErrAlreadyRevoked):
+		writeErr(w, http.StatusConflict, "already_revoked", "the certificate is already revoked")
+	case errors.Is(err, service.ErrNoCRL):
+		writeErr(w, http.StatusNotFound, "no_crl", "this CA has not published a CRL")
 	case errors.Is(err, store.ErrExists):
 		writeErr(w, http.StatusConflict, "already_exists", "already exists")
 	case errors.Is(err, store.ErrLastAdmin):

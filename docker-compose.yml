@@ -15,6 +15,9 @@ services:
     ports:
       # Bind to one interface rather than every one. Use 0.0.0.0 only on purpose.
       - "127.0.0.1:8443:8443"
+      # To publish CRLs (see docs/04-revocation.md): uncomment this, add
+      # "-pki-listen=0.0.0.0:8080" and "-public-url=http://your-host:8080" to the command.
+      # - "127.0.0.1:8080:8080"
     volumes:
       - pki-data:/data
       - ./certs:/certs:ro

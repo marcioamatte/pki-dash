@@ -128,6 +128,11 @@ type LeafRequest struct {
 	Validity   time.Duration
 	KeyAlgo    KeyAlgo
 	CSRPEM     []byte
+
+	// CRLURL and IssuerURL, when set, are written into the certificate so that
+	// clients know where to fetch the issuer's revocation list and certificate.
+	CRLURL    string
+	IssuerURL string
 }
 
 var dnsLabel = regexp.MustCompile(`^(\*\.)?([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
@@ -216,6 +221,7 @@ func (a *Authority) IssueLeaf(r LeafRequest, now time.Time) (*Bundle, error) {
 	policy := &config.Signing{Default: &config.SigningProfile{
 		Usage:  usage,
 		Expiry: r.Validity,
+		CRL:    r.CRLURL,
 		// Take nothing but the public key from the CSR. Subject and SANs are
 		// ours; any extension the requester smuggled in is dropped.
 		CSRWhitelist: &config.CSRWhitelist{
@@ -224,6 +230,9 @@ func (a *Authority) IssueLeaf(r LeafRequest, now time.Time) (*Bundle, error) {
 			SignatureAlgorithm: true,
 		},
 	}}
+	if r.IssuerURL != "" {
+		policy.Default.IssuerURL = []string{r.IssuerURL}
+	}
 	certPEM, err := a.sign(policy, signer.SignRequest{
 		Request:   string(csrPEM),
 		Hosts:     hosts,

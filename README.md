@@ -33,6 +33,7 @@ The server refuses to start unless you choose how it is served. On first run it 
 - [Stack decision](docs/01-stack-decision.md)
 - [Deployment (Docker)](docs/02-deployment.md)
 - [Keeping the Root offline](docs/03-offline-root.md)
+- [Revocation and CRLs](docs/04-revocation.md)
 
 ## License
 

@@ -7,11 +7,11 @@ import (
 )
 
 func TestPermissionMatrix(t *testing.T) {
-	all := []Permission{PermViewCAs, PermViewCerts, PermIssueCert, PermCreateIntermediate, PermCreateRoot,
+	all := []Permission{PermViewCAs, PermViewCerts, PermIssueCert, PermRevokeCert, PermCreateIntermediate, PermCreateRoot,
 		PermExportCAKey, PermRemoveRootKey, PermManageVault, PermManageUsers, PermViewAudit}
 	want := map[string]map[Permission]bool{
 		store.RoleViewer:   {PermViewCAs: true, PermViewCerts: true},
-		store.RoleOperator: {PermViewCAs: true, PermViewCerts: true, PermIssueCert: true},
+		store.RoleOperator: {PermViewCAs: true, PermViewCerts: true, PermIssueCert: true, PermRevokeCert: true},
 	}
 	for _, p := range all {
 		if !Can(store.RoleAdmin, p) {

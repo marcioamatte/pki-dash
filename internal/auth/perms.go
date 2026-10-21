@@ -9,6 +9,7 @@ const (
 	PermViewCAs            Permission = "ca.view"
 	PermViewCerts          Permission = "cert.view"
 	PermIssueCert          Permission = "cert.issue"
+	PermRevokeCert         Permission = "cert.revoke"
 	PermCreateIntermediate Permission = "ca.create_intermediate"
 	PermCreateRoot         Permission = "ca.create_root"
 	PermExportCAKey        Permission = "ca.export_key"
@@ -24,9 +25,9 @@ var viewer = []Permission{PermViewCAs, PermViewCerts}
 // named for, and an unknown role gets nothing at all.
 var rolePerms = map[string][]Permission{
 	store.RoleViewer:   viewer,
-	store.RoleOperator: append(append([]Permission{}, viewer...), PermIssueCert),
+	store.RoleOperator: append(append([]Permission{}, viewer...), PermIssueCert, PermRevokeCert),
 	store.RoleAdmin: {
-		PermViewCAs, PermViewCerts, PermIssueCert, PermCreateIntermediate, PermCreateRoot,
+		PermViewCAs, PermViewCerts, PermIssueCert, PermRevokeCert, PermCreateIntermediate, PermCreateRoot,
 		PermExportCAKey, PermRemoveRootKey, PermManageVault, PermManageUsers, PermViewAudit,
 	},
 }

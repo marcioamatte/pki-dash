@@ -49,6 +49,7 @@ type Server struct {
 	setupToken string
 	ui         fs.FS
 	general    *limiter
+	public     *limiter
 	strict     *limiter // login, passphrase and other credential-guessing targets
 }
 
@@ -63,6 +64,7 @@ func New(o Options) *Server {
 	return &Server{
 		svc: o.Service, auth: o.Auth, log: o.Logger, secure: o.SecureCookies, setupToken: o.SetupToken, ui: o.UI,
 		general: newLimiter(30, 120, o.Now),   // 30 req/s sustained, bursts of 120
+		public:  newLimiter(20, 100, o.Now),   // the public listener, per address
 		strict:  newLimiter(1.0/6, 10, o.Now), // 10 per minute sustained, bursts of 10
 	}
 }

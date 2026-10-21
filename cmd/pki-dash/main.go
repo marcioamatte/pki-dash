@@ -61,6 +61,8 @@ func run(ctx context.Context, args []string) error {
 	certFile := fs.String("tls-cert", env("PKI_DASH_TLS_CERT", ""), "TLS certificate file (env PKI_DASH_TLS_CERT)")
 	keyFile := fs.String("tls-key", env("PKI_DASH_TLS_KEY", ""), "TLS private key file (env PKI_DASH_TLS_KEY)")
 	selfSigned := fs.Bool("tls-self-signed", false, "serve TLS with a throwaway self-signed certificate (labs only)")
+	pkiListen := fs.String("pki-listen", env("PKI_DASH_PKI_LISTEN", ""), "address of the public, read-only listener that serves CRLs and CA certificates over plain HTTP, e.g. 0.0.0.0:8080 (env PKI_DASH_PKI_LISTEN)")
+	publicURL := fs.String("public-url", env("PKI_DASH_PUBLIC_URL", ""), "how clients reach that listener, e.g. http://pki.lab:8080; written into issued certificates (env PKI_DASH_PUBLIC_URL)")
 	showVersion := fs.Bool("version", false, "print the version and exit")
 	insecure := fs.Bool("insecure-http", false, "serve plain HTTP: development, or behind a TLS-terminating proxy you trust")
 	if err := fs.Parse(args); err != nil {
@@ -88,13 +90,24 @@ func run(ctx context.Context, args []string) error {
 		return errors.New("-tls-cert and -tls-key must be given together")
 	}
 
+	base, err := service.NormalizePublicURL(*publicURL)
+	if err != nil {
+		return err
+	}
+	if base != "" && *pkiListen == "" {
+		return errors.New("-public-url is set but there is no -pki-listen: nothing would serve the CRLs it points to")
+	}
+	if base == "" && *pkiListen != "" {
+		log.Warn("-pki-listen without -public-url: CRLs are served, but issued certificates will not point to them")
+	}
+
 	st, err := store.Open(filepath.Join(*dataDir, "pki.db"))
 	if err != nil {
 		return fmt.Errorf("open database: %w", err)
 	}
 	defer st.Close()
 
-	svc := service.New(st, service.Options{})
+	svc := service.New(st, service.Options{PublicURL: base})
 	au, err := auth.New(st, auth.Options{})
 	if err != nil {
 		return err
@@ -129,6 +142,8 @@ func run(ctx context.Context, args []string) error {
 		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
 	}
 
+	errc := make(chan error, 2)
+
 	go func() { // expired sessions would otherwise pile up
 		t := time.NewTicker(10 * time.Minute)
 		defer t.Stop()
@@ -144,7 +159,42 @@ func run(ctx context.Context, args []string) error {
 		}
 	}()
 
-	errc := make(chan error, 1)
+	// CRLs must be renewed before they expire. Signing needs the vault open, so
+	// while it is locked this does nothing, and the first unlock catches up.
+	go func() {
+		t := time.NewTicker(time.Hour)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if err := svc.RefreshCRLs(ctx, "system", false); err != nil && !errors.Is(err, service.ErrLocked) {
+					log.Error("refresh CRLs", "err", err)
+				}
+			}
+		}
+	}()
+
+	var pubSrv *http.Server
+	if *pkiListen != "" {
+		pubSrv = &http.Server{
+			Addr:              *pkiListen,
+			Handler:           srv.PublicHandler(),
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      30 * time.Second,
+			IdleTimeout:       60 * time.Second,
+			MaxHeaderBytes:    8 << 10,
+		}
+		go func() {
+			log.Info("serving the public PKI listener (plain HTTP, read-only)", "addr", *pkiListen, "public_url", base)
+			if err := pubSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errc <- err
+			}
+		}()
+	}
+
 	go func() {
 		switch {
 		case *insecure:
@@ -173,6 +223,9 @@ func run(ctx context.Context, args []string) error {
 	log.Info("shutting down")
 	shutdown, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	if pubSrv != nil {
+		_ = pubSrv.Shutdown(shutdown)
+	}
 	return httpSrv.Shutdown(shutdown)
 }
 
