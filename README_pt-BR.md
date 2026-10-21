@@ -41,6 +41,10 @@ O servidor se recusa a iniciar sem que você escolha como ele será servido. Na 
 - [Entrando com Keycloak (OIDC)](docs/05-sso-keycloak_pt-BR.md)
 - [Instalação: pacotes, imagem, binários](docs/06-installation_pt-BR.md)
 
+## Contribuindo
+
+Relatos de bugs, ideias, documentação e código são bem-vindos: veja [CONTRIBUTING_pt-BR.md](CONTRIBUTING_pt-BR.md). Espera-se que todos que participam sigam o [Código de Conduta](CODE_OF_CONDUCT_pt-BR.md). Para problemas de segurança, veja [SECURITY.md](SECURITY.md).
+
 ## Licença
 
 [MIT](LICENSE). O software de terceiros incluído está listado em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), incluindo o cfssl (BSD-2-Clause).

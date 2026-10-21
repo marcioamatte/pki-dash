@@ -15,4 +15,4 @@ pki-dash is intended for internal environments: homelabs, labs and test machines
 
 ## Supported versions
 
-The project has no stable release yet. Once released, only the latest minor version will receive security fixes.
+The project is pre-1.0. Only the latest release receives security fixes, so please update before reporting, and say which version you tested.
