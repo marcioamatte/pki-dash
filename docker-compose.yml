@@ -11,6 +11,9 @@ services:
   pki-dash:
     build: .                 # no published image yet: this builds it from this checkout
     image: pki-dash:local
+    # Behind a TLS-terminating proxy (docs/02-deployment.md): use "-insecure-http" instead of the
+    # TLS options and add "-trusted-proxies=<the proxy's address>"; the proxy must append X-Forwarded-For.
+    #
     # To sign in with Keycloak/OIDC (docs/05-sso-keycloak.md), add to the command, for example:
     #   "-external-url=https://pki.lab:8443", "-oidc-issuer=https://keycloak.lab/realms/lab",
     #   "-oidc-client-id=pki-dash", "-oidc-client-secret-file=/run/oidc/secret",
