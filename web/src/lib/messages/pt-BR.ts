@@ -4,6 +4,7 @@ export const ptBR: Record<MessageKey, string> = {
   'app.name': 'pki-dash',
   'app.disclaimer':
     'Apenas para ambientes internos. Não use para PKI pública nem onde o comprometimento de uma CA seria crítico.',
+  'app.noWarranty': 'Sem garantia: todo o risco do uso é seu.',
 
   'common.skipToContent': 'Ir para o conteúdo',
   'common.loading': 'Carregando…',

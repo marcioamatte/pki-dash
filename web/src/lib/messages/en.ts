@@ -5,6 +5,7 @@ export const en = {
   'app.name': 'pki-dash',
   'app.disclaimer':
     'For internal environments only. Not for public PKI or places where a CA compromise would be critical.',
+  'app.noWarranty': 'No warranty: all risk of use is yours.',
 
   'common.skipToContent': 'Skip to content',
   'common.loading': 'Loading…',
