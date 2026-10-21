@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Alert from '../components/Alert.svelte';
+  import PageHeader from '../components/PageHeader.svelte';
   import VaultGate from '../components/VaultGate.svelte';
   import { api, downloadURL, type CA, type PendingCA } from '../lib/api';
   import { errorMessage } from '../lib/errors';
@@ -54,22 +55,21 @@
   }
 </script>
 
-{#if !vaultReady}<VaultGate />{/if}
+<PageHeader title={t('cas.title')} subtitle={t('cas.subtitle')}>
+  {#snippet actions()}
+    {#if isAdmin()}
+      <div class="flex shrink-0 gap-2">
+        <button class="btn-secondary" onclick={() => (importingRoot = true)}>{t('import.root.button')}</button>
+        <button class="btn-primary" disabled={!vaultReady} onclick={() => (creating = true)}>
+          {t('cas.create')}
+        </button>
+      </div>
+    {/if}
+  {/snippet}
+</PageHeader>
 
-<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-  <div>
-    <h1 class="text-2xl font-semibold">{t('cas.title')}</h1>
-    <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('cas.subtitle')}</p>
-  </div>
-  {#if isAdmin()}
-    <div class="flex shrink-0 gap-2">
-      <button class="btn-secondary" onclick={() => (importingRoot = true)}>{t('import.root.button')}</button>
-      <button class="btn-primary" disabled={!vaultReady} onclick={() => (creating = true)}>
-        {t('cas.create')}
-      </button>
-    </div>
-  {/if}
-</div>
+<div class="page">
+{#if !vaultReady}<VaultGate />{/if}
 
 {#if error}
   <Alert>{error}</Alert>
@@ -79,20 +79,20 @@
   <div class="card text-center text-sm text-slate-600 dark:text-slate-400">{t('cas.empty')}</div>
 {:else}
   <div class="card overflow-x-auto p-0">
-    <table class="w-full text-left text-sm whitespace-nowrap">
-      <thead class="border-b border-slate-200 text-xs text-slate-500 uppercase dark:border-slate-800 dark:text-slate-400">
+    <table class="data-table table-stack">
+      <thead>
         <tr>
-          <th class="px-4 py-3 font-medium">{t('cas.col.name')}</th>
-          <th class="px-4 py-3 font-medium">{t('cas.col.type')}</th>
-          <th class="px-4 py-3 font-medium">{t('cas.col.validity')}</th>
-          <th class="px-4 py-3 font-medium">{t('cas.col.status')}</th>
-          <th class="px-4 py-3 font-medium">{t('cas.col.download')}</th>
+          <th class="px-4 py-3 font-semibold">{t('cas.col.name')}</th>
+          <th class="px-4 py-3 font-semibold">{t('cas.col.type')}</th>
+          <th class="px-4 py-3 font-semibold">{t('cas.col.validity')}</th>
+          <th class="px-4 py-3 font-semibold">{t('cas.col.status')}</th>
+          <th class="px-4 py-3 font-semibold">{t('cas.col.download')}</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         {#each rows as ca (ca.id)}
           <tr>
-            <td class="px-4 py-3 font-medium">
+            <td class="px-4 py-3 font-semibold" data-label={t('cas.col.name')}>
               <span class="{ca.kind === 'intermediate' ? 'ml-5 inline-block' : ''} {ca.revoked ? 'line-through opacity-70' : ''}">{ca.name}</span>
               {#if ca.revoked}
                 <span
@@ -101,45 +101,45 @@
                 >{t('cas.revoked')}</span>
               {/if}
             </td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3" data-label={t('cas.col.type')}>
               <span
                 class="badge {ca.kind === 'root'
-                  ? 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200'
+                  ? 'bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-200'
                   : 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200'}"
               >
                 {t(`cas.kind.${ca.kind}`)}
               </span>
             </td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3" data-label={t('cas.col.validity')}>
               {formatDate(ca.not_after)}
               {#if expired(ca)}
                 <span class="badge ml-1 bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200">{t('cas.expired')}</span>
               {/if}
             </td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3" data-label={t('cas.col.status')}>
               <span class="badge {ca.key_held ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'}">
                 {ca.key_held ? t('cas.keyHeld') : t('cas.keyOffline')}
               </span>
             </td>
-            <td class="px-4 py-3">
-              <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.caCert(ca.id)} download>{t('cas.download.cert')}</a>
+            <td class="px-4 py-3" data-label={t('cas.col.download')}>
+              <a class="text-brand-600 hover:underline dark:text-brand-400" href={downloadURL.caCert(ca.id)} download>{t('cas.download.cert')}</a>
               {#if ca.kind === 'intermediate'}
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
-                <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.caChain(ca.id)} download>{t('cas.download.chain')}</a>
+                <a class="text-brand-600 hover:underline dark:text-brand-400" href={downloadURL.caChain(ca.id)} download>{t('cas.download.chain')}</a>
                 {#if isAdmin() && !ca.revoked}
                   <span class="text-slate-300 dark:text-slate-700"> · </span>
                   <button type="button" class="text-red-700 hover:underline dark:text-red-400" onclick={() => (revokingCa = ca)}>{t('cas.revoke')}</button>
                 {/if}
               {:else}
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
-                <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (trusting = ca)}>{t('trust.button')}</button>
+                <button type="button" class="text-brand-600 hover:underline dark:text-brand-400" onclick={() => (trusting = ca)}>{t('trust.button')}</button>
                 {#if isAdmin()}
                   <span class="text-slate-300 dark:text-slate-700"> · </span>
-                  <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (rootCrlFor = ca)}>{t('cas.rootCrl')}</button>
+                  <button type="button" class="text-brand-600 hover:underline dark:text-brand-400" onclick={() => (rootCrlFor = ca)}>{t('cas.rootCrl')}</button>
                 {/if}
                 {#if isAdmin() && ca.key_held}
                   <span class="text-slate-300 dark:text-slate-700"> · </span>
-                  <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (offline = ca)}>{t('offline.button')}</button>
+                  <button type="button" class="text-brand-600 hover:underline dark:text-brand-400" onclick={() => (offline = ca)}>{t('offline.button')}</button>
                 {/if}
               {/if}
             </td>
@@ -190,3 +190,4 @@
 {#if creating}
   <CreateCA {roots} onCreated={created} onChanged={load} onClose={() => (creating = false)} />
 {/if}
+</div>

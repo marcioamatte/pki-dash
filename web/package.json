@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@fontsource/philosopher": "5.3.0",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@tailwindcss/vite": "4.3.3",
     "svelte": "5.57.2",

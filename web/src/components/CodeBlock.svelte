@@ -16,7 +16,7 @@
 </script>
 
 <div class="relative">
-  <pre class="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-3 pr-20 text-xs leading-relaxed dark:border-slate-800 dark:bg-slate-950"><code>{code}</code></pre>
+  <pre class="overflow-x-auto rounded-sm border border-slate-200 bg-slate-50 p-3 pr-20 text-xs leading-relaxed dark:border-slate-800 dark:bg-slate-950"><code>{code}</code></pre>
   <button type="button" class="btn-secondary absolute top-2 right-2 !px-2 !py-1 text-xs" onclick={copy}>
     {copied ? t('common.copied') : t('common.copy')}
   </button>

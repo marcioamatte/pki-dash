@@ -95,7 +95,7 @@
       </a>
     </div>
     <div>
-      <h3 class="mb-1 text-sm font-medium">{t('request.done.csr')}</h3>
+      <h3 class="mb-1 text-sm font-semibold">{t('request.done.csr')}</h3>
       <CodeBlock code={requested.csr_pem} />
     </div>
     <h3 class="text-sm font-semibold">{t('sign.title')}</h3>

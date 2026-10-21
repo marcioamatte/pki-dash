@@ -120,15 +120,15 @@
     <p class="hint">{t('issue.done.servers')}</p>
 
     <div>
-      <h3 class="mb-1 text-sm font-medium">{t('issue.done.certificate')}</h3>
+      <h3 class="mb-1 text-sm font-semibold">{t('issue.done.certificate')}</h3>
       <CodeBlock code={issued.certificate_pem} />
     </div>
 
     {#if issued.private_key_pem}
       <div>
         <div class="mb-1 flex items-center justify-between">
-          <h3 class="text-sm font-medium">{t('issue.done.privateKey')}</h3>
-          <button type="button" class="text-sm text-teal-700 hover:underline dark:text-teal-400" onclick={() => (showKey = !showKey)}>
+          <h3 class="text-sm font-semibold">{t('issue.done.privateKey')}</h3>
+          <button type="button" class="text-sm text-brand-600 hover:underline dark:text-brand-400" onclick={() => (showKey = !showKey)}>
             {showKey ? t('issue.done.hide') : t('issue.done.show')}
           </button>
         </div>

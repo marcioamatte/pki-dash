@@ -20,7 +20,7 @@
   const attention = $derived(needsAttention(items));
 
   const style: Record<CrlHealth, string> = {
-    ok: 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200',
+    ok: 'bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-200',
     behind: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
     expired: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
     none: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
@@ -70,41 +70,41 @@
   {#if renewed}<div class="p-4 pb-0"><Alert kind="info">{t('crl.refreshed')}</Alert></div>{/if}
 
   <div class="overflow-x-auto">
-    <table class="w-full text-left text-sm whitespace-nowrap">
-      <thead class="text-xs text-slate-500 uppercase dark:text-slate-400">
+    <table class="data-table table-stack">
+      <thead>
         <tr>
-          <th class="px-4 py-3 font-medium">{t('crl.col.ca')}</th>
-          <th class="px-4 py-3 font-medium">{t('crl.col.status')}</th>
-          <th class="px-4 py-3 font-medium">{t('crl.col.list')}</th>
-          <th class="px-4 py-3 font-medium">{t('crl.col.validUntil')}</th>
-          <th class="px-4 py-3 font-medium">{t('crl.col.revoked')}</th>
-          <th class="px-4 py-3 font-medium"></th>
+          <th class="px-4 py-3 font-semibold">{t('crl.col.ca')}</th>
+          <th class="px-4 py-3 font-semibold">{t('crl.col.status')}</th>
+          <th class="px-4 py-3 font-semibold">{t('crl.col.list')}</th>
+          <th class="px-4 py-3 font-semibold">{t('crl.col.validUntil')}</th>
+          <th class="px-4 py-3 font-semibold">{t('crl.col.revoked')}</th>
+          <th class="px-4 py-3 font-semibold"></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         {#each items as c (c.ca_id)}
           {@const h = crlHealth(c)}
           <tr>
-            <td class="px-4 py-3 font-medium">
+            <td class="px-4 py-3 font-semibold" data-label={t('crl.col.ca')}>
               {c.ca_name}
               {#if c.external}<div class="text-xs font-normal text-slate-500 dark:text-slate-400">{t('crl.kind.root')}</div>{/if}
             </td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3" data-label={t('crl.col.status')}>
               <span
                 class="badge {style[h]}"
                 title={h === 'cannot_sign' ? t('crl.hint.cannot_sign') : h === 'retired' ? t('crl.hint.retired') : undefined}
               >{t(`crl.health.${h}`)}</span>
             </td>
-            <td class="px-4 py-3">{c.published && c.number ? t('crl.number', { n: c.number }) : '—'}</td>
-            <td class="px-4 py-3">{c.next_update ? formatDateTime(c.next_update) : '—'}</td>
-            <td class="px-4 py-3">{t('crl.revokedCount', { revoked: c.revoked, inList: c.in_list })}</td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3" data-label={t('crl.col.list')}>{c.published && c.number ? t('crl.number', { n: c.number }) : '—'}</td>
+            <td class="px-4 py-3" data-label={t('crl.col.validUntil')}>{c.next_update ? formatDateTime(c.next_update) : '—'}</td>
+            <td class="px-4 py-3" data-label={t('crl.col.revoked')}>{t('crl.revokedCount', { revoked: c.revoked, inList: c.in_list })}</td>
+            <td class="px-4 py-3" data-label="">
               {#if c.published}
-                <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.crl(c.ca_id)} download>{t('crl.download')}</a>
+                <a class="text-brand-600 hover:underline dark:text-brand-400" href={downloadURL.crl(c.ca_id)} download>{t('crl.download')}</a>
               {/if}
               {#if c.external && canManage}
                 {#if c.published}<span class="text-slate-300 dark:text-slate-700"> · </span>{/if}
-                <button type="button" class="font-medium text-teal-700 hover:underline dark:text-teal-400" onclick={() => onPublishRoot(c.ca_id)}>{t('crl.publishRoot')}</button>
+                <button type="button" class="font-semibold text-brand-600 hover:underline dark:text-brand-400" onclick={() => onPublishRoot(c.ca_id)}>{t('crl.publishRoot')}</button>
               {/if}
             </td>
           </tr>

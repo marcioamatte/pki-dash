@@ -1,36 +1,148 @@
 @import 'tailwindcss';
+@import '@fontsource/philosopher/latin-400.css';
+@import '@fontsource/philosopher/latin-700.css';
 
 /* Dark mode follows the operating system (Tailwind's default media strategy). */
 
+@theme {
+  /* Philosopher for everything except code, which keeps the system monospace. */
+  --font-sans: 'Philosopher', ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand: a strong blue and a deep navy, on white. */
+  --color-brand-50: #eef4fd;
+  --color-brand-100: #dbe7fb;
+  --color-brand-200: #b8cff7;
+  --color-brand-300: #86adf0;
+  --color-brand-400: #4d86e6;
+  --color-brand-500: #1f63d2;
+  --color-brand-600: #0047bb;
+  --color-brand-700: #00389a;
+  --color-brand-800: #002c78;
+  --color-brand-900: #001a47;
+  --color-brand-950: #00102e;
+
+  /* Neutrals tinted toward the navy, instead of Tailwind's grey. */
+  --color-slate-50: #f4f6fa;
+  --color-slate-100: #e9edf4;
+  --color-slate-200: #d8dfeb;
+  --color-slate-300: #bcc7da;
+  --color-slate-400: #8a98b2;
+  --color-slate-500: #64738f;
+  --color-slate-600: #4b5a76;
+  --color-slate-700: #35425c;
+  --color-slate-800: #1c2740;
+  --color-slate-900: #0f1a2e;
+  --color-slate-950: #08111f;
+}
+
+/* Philosopher has a small x-height: a larger root keeps text as comfortable to read. */
+html {
+  font-size: 17px;
+}
+
 /* Declared with @utility so the variants below can @apply it (Tailwind v4). */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-teal-600/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-brand-500/60 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 @layer components {
   .card {
-    @apply rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900;
+    @apply rounded-sm border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900;
   }
   .input {
-    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-600/30 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100;
+    @apply block w-full rounded-sm border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/30 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100;
   }
   .label {
-    @apply mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300;
+    @apply mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300;
   }
   .hint {
     @apply mt-1 text-xs text-slate-500 dark:text-slate-400;
   }
   .btn-primary {
-    @apply btn bg-teal-700 text-white hover:bg-teal-800;
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
   }
   .btn-secondary {
     @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800;
   }
+  /* A button on the dark header. */
+  .btn-ghost {
+    @apply btn border border-white/30 text-white hover:bg-white/10;
+  }
   .badge {
-    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-semibold;
+  }
+  /* The area under a page header: full width, with comfortable side margins. */
+  .page {
+    @apply px-4 py-6 sm:px-6 lg:px-8;
+  }
+  /* Tables fill the width and wrap their text, so they rarely need to scroll. */
+  .data-table {
+    @apply w-full border-collapse text-left text-sm;
+  }
+  .data-table thead {
+    @apply bg-slate-100 text-xs tracking-wide text-slate-600 uppercase dark:bg-slate-800/60 dark:text-slate-400;
+  }
+  .data-table tbody tr {
+    @apply hover:bg-brand-50/60 dark:hover:bg-slate-800/40;
   }
 }
 
 body {
   @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+}
+
+/*
+ * Below 900px a table becomes a list of cards: each cell shows its column name
+ * (from data-label) above its value, left aligned, so text wraps normally and
+ * nothing needs a sideways scroll. The header row stays available to screen
+ * readers.
+ */
+@media (max-width: 899px) {
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+  .table-stack tr {
+    border-top: 1px solid var(--color-slate-200);
+    padding: 0.6rem 0;
+  }
+  .table-stack td {
+    padding: 0.3rem 1rem;
+    text-align: left;
+    overflow-wrap: anywhere;
+    /* undo the single-line truncation used on wide screens */
+    max-width: none !important;
+    white-space: normal !important;
+    text-overflow: clip !important;
+  }
+  .table-stack td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-slate-500);
+  }
+  .table-stack td[data-label='']::before {
+    display: none;
+  }
+  @media (prefers-color-scheme: dark) {
+    .table-stack tr {
+      border-top-color: var(--color-slate-800);
+    }
+    .table-stack td::before {
+      color: var(--color-slate-400);
+    }
+  }
 }

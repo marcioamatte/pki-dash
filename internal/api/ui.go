@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"io/fs"
+	"mime"
 	"net/http"
 	"path"
 	"strings"
@@ -14,6 +15,13 @@ import (
 // no preload polyfill).
 const uiCSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; " +
 	"connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+
+func init() {
+	// The runtime image has no /etc/mime.types, and fonts are not in Go's built-in
+	// table, so say what they are instead of leaving it to content sniffing.
+	_ = mime.AddExtensionType(".woff2", "font/woff2")
+	_ = mime.AddExtensionType(".woff", "font/woff")
+}
 
 // uiRoutes serves the single-page app: index.html at "/", and hashed assets.
 // The app uses hash routing, so no other path ever needs index.html.
