@@ -44,6 +44,10 @@ type Options struct {
 	// KDF overrides the Argon2id cost for new vaults (the floor is still
 	// enforced). The zero value means vault.DefaultParams.
 	KDF vault.Params
+	// PublicURL is where clients reach the public PKI listener, for example
+	// http://pki.lab:8080. When set, issued certificates carry the address of the
+	// issuer's CRL and certificate. Use NormalizePublicURL to validate it.
+	PublicURL string
 	// Now overrides the clock, for tests.
 	Now func() time.Time
 }
@@ -135,6 +139,9 @@ func (s *Service) Unlock(ctx context.Context, actor, passphrase string) error {
 		return err
 	}
 	s.setVault(v)
+	// Revocations recorded while the vault was locked can be published now. A
+	// failure here must not stop the unlock: the next scheduled refresh retries.
+	_ = s.RefreshCRLs(ctx, actor, false)
 	return nil
 }
 
@@ -360,6 +367,23 @@ func (s *Service) IssueCertificate(ctx context.Context, actor, caID string, r ca
 	if err != nil {
 		return nil, err
 	}
+	var warnings []string
+	if s.opts.PublicURL != "" {
+		if canSignCRL(issuer) {
+			// Clients that check revocation will look for this list, so it must
+			// exist before the first certificate that points to it.
+			if _, err := s.st.GetCRL(ctx, caID); errors.Is(err, store.ErrNotFound) {
+				if _, err := s.refreshCRL(ctx, actor, caID); err != nil {
+					return nil, err
+				}
+			} else if err != nil {
+				return nil, err
+			}
+			r.CRLURL, r.IssuerURL = s.crlURL(caID), s.issuerURL(caID)
+		} else {
+			warnings = append(warnings, "this CA's certificate has no cRLSign key usage, so it cannot publish a CRL: the certificate carries no revocation address")
+		}
+	}
 	b, err := auth.IssueLeaf(r, s.opts.Now())
 	if err != nil {
 		return nil, err
@@ -387,7 +411,7 @@ func (s *Service) IssueCertificate(ctx context.Context, actor, caID string, r ca
 		clear(b.KeyPEM)
 		return nil, err
 	}
-	out := &Issued{ID: id, Bundle: b, ChainPEM: chain}
+	out := &Issued{ID: id, Bundle: b, ChainPEM: chain, Warnings: warnings}
 	if r.Validity > MaxBrowserValidity {
 		out.Warnings = append(out.Warnings, fmt.Sprintf(
 			"validity exceeds %d days; browsers and many clients reject longer-lived certificates",

@@ -101,4 +101,25 @@ CREATE TABLE pending_cas (
 	created_at INTEGER NOT NULL
 ) STRICT;
 `,
+
+	// 4: revocation and published CRLs
+	`
+ALTER TABLE certificates ADD COLUMN revoked_at INTEGER;
+-- RFC 5280 reason codes we allow for service certificates (see internal/ca).
+ALTER TABLE certificates ADD COLUMN revocation_reason INTEGER NOT NULL DEFAULT 0
+	CHECK (revocation_reason IN (0, 1, 3, 4, 5));
+CREATE INDEX certificates_revoked ON certificates(ca_id) WHERE revoked_at IS NOT NULL;
+
+-- The latest CRL each CA has published. revoked_count lets us tell, exactly and
+-- without comparing clocks, whether a CRL is missing a revocation.
+CREATE TABLE crls (
+	ca_id         TEXT PRIMARY KEY REFERENCES cas(id) ON DELETE RESTRICT,
+	number        INTEGER NOT NULL CHECK (number >= 1),
+	generated_at  INTEGER NOT NULL,
+	this_update   INTEGER NOT NULL,
+	next_update   INTEGER NOT NULL,
+	revoked_count INTEGER NOT NULL,
+	der           BLOB NOT NULL
+) STRICT;
+`,
 }

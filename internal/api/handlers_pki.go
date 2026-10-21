@@ -233,13 +233,20 @@ type certDTO struct {
 	NotAfter     string   `json:"not_after"`
 	KeyGenerated bool     `json:"key_generated"`
 	CreatedAt    string   `json:"created_at"`
+	Revoked      bool     `json:"revoked"`
+	RevokedAt    string   `json:"revoked_at,omitempty"`
+	Reason       string   `json:"revocation_reason,omitempty"`
 }
 
 func toCerts(cs []store.Certificate) []certDTO {
 	out := make([]certDTO, 0, len(cs))
 	for _, c := range cs {
-		out = append(out, certDTO{c.ID, c.CAID, c.Serial, c.CommonName, c.SANs, c.Profile,
-			rfc3339(c.NotBefore), rfc3339(c.NotAfter), c.KeyGenerated, rfc3339(c.CreatedAt)})
+		d := certDTO{ID: c.ID, CAID: c.CAID, Serial: c.Serial, CommonName: c.CommonName, SANs: c.SANs, Profile: c.Profile,
+			NotBefore: rfc3339(c.NotBefore), NotAfter: rfc3339(c.NotAfter), KeyGenerated: c.KeyGenerated, CreatedAt: rfc3339(c.CreatedAt)}
+		if c.Revoked() {
+			d.Revoked, d.RevokedAt, d.Reason = true, rfc3339(c.RevokedAt), reasonName(c.RevocationReason)
+		}
+		out = append(out, d)
 	}
 	return out
 }
