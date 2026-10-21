@@ -4,9 +4,11 @@ Um painel web para criar e gerenciar uma PKI interna (Root CA, CAs intermediári
 
 > Idioma principal: [English](README.md)
 
-> **Status: pré-1.0 (v0.1.0).** Testado de ponta a ponta com cfssl, openssl, Keycloak e nginx reais, inclusive na infraestrutura do próprio autor, mas não auditado por mais ninguém. O comportamento pode mudar entre versões: leia as [notas de release](https://github.com/marcioamatte/pki-dash/releases) e faça backup antes de atualizar.
+> **Status: pré-1.0 (v0.1.0).** Testado de ponta a ponta com cfssl, openssl, Keycloak e nginx reais, inclusive na infraestrutura do próprio autor, mas não auditado por mais ninguém. O comportamento pode mudar entre versões: leia as [notas de release](https://github.com/marcioamatte/pki-dash/releases) e faça backup antes de atualizar. **Não há garantia alguma e todo o risco do uso é seu: veja o aviso abaixo.**
 
-> **Aviso:** o pki-dash é destinado a ambientes internos, como homelabs, laboratórios e máquinas de teste. **Não** é destinado a PKI pública nem a cenários em que o comprometimento da CA tenha impacto crítico. Não substitui HSM, cerimônia de chaves formal nem uma CA comercial.
+> **SEM GARANTIAS. USE POR SUA CONTA E RISCO.** O pki-dash é fornecido "no estado em que se encontra", sem garantia de qualquer tipo, expressa ou implícita, como declara a [licença MIT](LICENSE). **O usuário é o único responsável por todo e qualquer risco do uso, inclusive o uso indevido e o uso em cenários inadequados**: o autor não assume responsabilidade por nenhum dano, perda, indisponibilidade ou comprometimento de chaves, certificados ou sistemas decorrente dele.
+>
+> Ele é destinado a ambientes internos, como homelabs, laboratórios e máquinas de teste. **Não** é destinado a PKI pública nem a cenários em que o comprometimento da CA tenha impacto crítico. Não substitui HSM, cerimônia de chaves formal nem uma CA comercial.
 
 ## Objetivos
 

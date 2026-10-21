@@ -4,9 +4,11 @@ A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs 
 
 > Translations: [pt-BR](README_pt-BR.md)
 
-> **Status: pre-1.0 (v0.1.0).** Tested end to end against real cfssl, openssl, Keycloak and nginx, including on the author's own infrastructure, but not audited by anyone else. Behaviour may change between versions: read the [release notes](https://github.com/marcioamatte/pki-dash/releases) and back up before upgrading.
+> **Status: pre-1.0 (v0.1.0).** Tested end to end against real cfssl, openssl, Keycloak and nginx, including on the author's own infrastructure, but not audited by anyone else. Behaviour may change between versions: read the [release notes](https://github.com/marcioamatte/pki-dash/releases) and back up before upgrading. **There is no warranty and all risk of use is yours: see the notice below.**
 
-> **Disclaimer:** pki-dash is meant for internal environments such as homelabs, labs and test machines. It is **not** intended for public PKI or for settings where a CA compromise would have critical impact. It does not replace an HSM, a formal key ceremony or a commercial CA.
+> **NO WARRANTY. USE AT YOUR OWN RISK.** pki-dash is provided "as is", without warranty of any kind, express or implied, as the [MIT license](LICENSE) states. **The user is solely responsible for every risk of using it, including misuse and use in unsuitable settings**: the author accepts no liability for any damage, loss, outage, or compromise of keys, certificates or systems that results from it.
+>
+> It is meant for internal environments such as homelabs, labs and test machines. It is **not** intended for public PKI or for settings where a CA compromise would have critical impact. It does not replace an HSM, a formal key ceremony or a commercial CA.
 
 ## Goals
 
