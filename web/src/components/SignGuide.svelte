@@ -1,15 +1,17 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { t } from '../lib/i18n.svelte';
-  import { maxSigningDays, signers, signingGuide, type Signer } from '../lib/signing';
+  import { session } from '../lib/session.svelte';
+  import { maxSigningDays, rootPointers, signers, signingGuide, type Signer } from '../lib/signing';
   import CodeBlock from './CodeBlock.svelte';
 
-  let { requestName, rootNotAfter }: { requestName: string; rootNotAfter: string } = $props();
+  let { requestName, rootNotAfter, rootId }: { requestName: string; rootNotAfter: string; rootId: string } = $props();
 
   let signer = $state<Signer>('cfssl');
   const limit = untrack(() => maxSigningDays(rootNotAfter));
   let days = $state(String(limit));
-  const guide = $derived(signingGuide(signer, requestName, Number(days)));
+  const pointers = $derived(rootPointers(session.publicUrl, rootId));
+  const guide = $derived(signingGuide(signer, requestName, Number(days), pointers));
 </script>
 
 <div class="flex flex-col gap-3 text-sm">
@@ -38,6 +40,7 @@
   </div>
 
   <div class="flex flex-col gap-3" role="tabpanel">
+    <p class="hint !mt-0">{pointers ? t('sign.pointers') : t('sign.noPointers')}</p>
     <p>{t('sign.files')}</p>
     {#each guide.files as f (f.name)}
       <div>

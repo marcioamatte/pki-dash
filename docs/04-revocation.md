@@ -108,6 +108,13 @@ An intermediate is revoked by **its Root**, and the Root stays offline. So this 
    openssl's list carries the CRL number and the reason, so prefer it if you can.
 4. **Import it** (`POST /api/v1/cas/{root}/crl/import`, PEM, DER or cfssl's base64). The dashboard serves it at the Root's `/crl/<root-id>.crl`.
 
+### In the web UI
+
+- **Revoke** an intermediate from its row on the Certificate authorities page (admins). Choose a reason (`ca_compromise` is offered here) and acknowledge that it is final. The dialog then offers **Publish the Root's CRL**.
+- **Root CRL** on a Root's row (and **Publish Root CRL** in the *Revocation lists* panel) opens a wizard: it lists the revoked intermediates the list must contain, lets you pick the list's validity, and shows the files and the command for **openssl** or **cfssl**, already filled in (the CRL number is the next one). Run them on the Root's machine, then paste or choose the result and **Publish CRL**.
+- The *Revocation lists* panel also shows the Root's list: *Up to date*, *Behind* (it does not name every revoked intermediate), *Waiting for the Root's list*, or *Expired*, with a warning. A revoked intermediate shows as *Retired*.
+- When you sign a new intermediate, the recipes shown in the dashboard now include the pointer to the Root's CRL, if the server has a public URL (see below).
+
 ### What the import checks
 
 It is published in the Root's name, so it is checked first:

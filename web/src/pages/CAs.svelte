@@ -5,10 +5,13 @@
   import { api, downloadURL, type CA, type PendingCA } from '../lib/api';
   import { errorMessage } from '../lib/errors';
   import { formatDate, t } from '../lib/i18n.svelte';
+  import { isReason } from '../lib/revocation';
   import { isAdmin, session } from '../lib/session.svelte';
   import CreateCA from './CreateCA.svelte';
   import ImportRoot from './ImportRoot.svelte';
   import Pending from './Pending.svelte';
+  import RevokeCA from './RevokeCA.svelte';
+  import RootCrlWizard from './RootCrlWizard.svelte';
   import RootOffline from './RootOffline.svelte';
   import TrustDialog from './TrustDialog.svelte';
 
@@ -19,6 +22,10 @@
   let creating = $state(false);
   let trusting = $state<CA | null>(null);
   let offline = $state<CA | null>(null);
+  let revokingCa = $state<CA | null>(null);
+  let rootCrlFor = $state<CA | null>(null);
+
+  const reasonLabel = (r?: string) => (r === 'ca_compromise' || isReason(r) ? t(`reason.${r}` as 'reason.superseded') : '');
 
   async function load() {
     try {
@@ -86,7 +93,13 @@
         {#each rows as ca (ca.id)}
           <tr>
             <td class="px-4 py-3 font-medium">
-              <span class={ca.kind === 'intermediate' ? 'ml-5 inline-block' : ''}>{ca.name}</span>
+              <span class="{ca.kind === 'intermediate' ? 'ml-5 inline-block' : ''} {ca.revoked ? 'line-through opacity-70' : ''}">{ca.name}</span>
+              {#if ca.revoked}
+                <span
+                  class="badge ml-1 bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200"
+                  title={t('cas.revokedOn', { date: formatDate(ca.revoked_at ?? ''), reason: reasonLabel(ca.revocation_reason) })}
+                >{t('cas.revoked')}</span>
+              {/if}
             </td>
             <td class="px-4 py-3">
               <span
@@ -113,9 +126,17 @@
               {#if ca.kind === 'intermediate'}
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
                 <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.caChain(ca.id)} download>{t('cas.download.chain')}</a>
+                {#if isAdmin() && !ca.revoked}
+                  <span class="text-slate-300 dark:text-slate-700"> · </span>
+                  <button type="button" class="text-red-700 hover:underline dark:text-red-400" onclick={() => (revokingCa = ca)}>{t('cas.revoke')}</button>
+                {/if}
               {:else}
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
                 <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (trusting = ca)}>{t('trust.button')}</button>
+                {#if isAdmin()}
+                  <span class="text-slate-300 dark:text-slate-700"> · </span>
+                  <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (rootCrlFor = ca)}>{t('cas.rootCrl')}</button>
+                {/if}
                 {#if isAdmin() && ca.key_held}
                   <span class="text-slate-300 dark:text-slate-700"> · </span>
                   <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (offline = ca)}>{t('offline.button')}</button>
@@ -135,6 +156,22 @@
 
 {#if importingRoot}
   <ImportRoot onImported={() => { importingRoot = false; load(); }} onClose={() => (importingRoot = false)} />
+{/if}
+
+{#if revokingCa}
+  <RevokeCA
+    ca={revokingCa}
+    onRevoked={load}
+    onPublish={(rootId) => {
+      revokingCa = null;
+      rootCrlFor = (cas ?? []).find((c) => c.id === rootId) ?? null;
+    }}
+    onClose={() => (revokingCa = null)}
+  />
+{/if}
+
+{#if rootCrlFor}
+  <RootCrlWizard root={rootCrlFor} onChanged={load} onClose={() => (rootCrlFor = null)} />
 {/if}
 
 {#if offline}

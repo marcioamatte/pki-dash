@@ -11,6 +11,7 @@
   import { canIssue, canRevoke, session } from '../lib/session.svelte';
   import IssueCert from './IssueCert.svelte';
   import RevokeCert from './RevokeCert.svelte';
+  import RootCrlWizard from './RootCrlWizard.svelte';
 
   let certs = $state<Cert[] | null>(null);
   let cas = $state<CA[]>([]);
@@ -19,6 +20,7 @@
   let issuing = $state(false);
   let crls = $state<Crl[]>([]);
   let revoking = $state<Cert | null>(null);
+  let rootCrl = $state<CA | null>(null);
   let hideRevoked = $state(false);
 
   async function load() {
@@ -64,7 +66,13 @@
 </div>
 
 {#if crls.length > 0}
-  <CrlStatus items={crls} canManage={canRevoke()} {vaultReady} onChanged={load} />
+  <CrlStatus
+    items={crls}
+    canManage={canRevoke()}
+    {vaultReady}
+    onChanged={load}
+    onPublishRoot={(id) => (rootCrl = cas.find((c) => c.id === id) ?? null)}
+  />
 {/if}
 
 <div class="mb-4 flex flex-wrap items-end gap-4">
@@ -149,4 +157,8 @@
 
 {#if revoking}
   <RevokeCert cert={revoking} canPublish={canPublish(revoking)} onRevoked={load} onClose={() => (revoking = null)} />
+{/if}
+
+{#if rootCrl}
+  <RootCrlWizard root={rootCrl} onChanged={load} onClose={() => (rootCrl = null)} />
 {/if}

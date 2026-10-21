@@ -358,6 +358,67 @@ export const en = {
     'The revocation list of {name} has expired. Clients that check revocation will refuse its certificates until it is renewed. Unlock the vault to renew it.',
   'crl.alert.behind':
     'Some revocations of {name} are recorded but not published yet. Unlock the vault, or press Refresh now, to publish them.',
+
+  'cas.revoked': 'Revoked',
+  'cas.revokedOn': 'Revoked on {date}: {reason}',
+  'cas.revoke': 'Revoke',
+  'cas.rootCrl': 'Root CRL',
+  'reason.ca_compromise': 'The CA’s key was compromised',
+
+  'revokeCa.title': 'Revoke {name}',
+  'revokeCa.intro':
+    'Revoking an intermediate is final. This service stops issuing from it and signs no more lists with its key, immediately.',
+  'revokeCa.warn':
+    'Clients only learn of it from the Root’s revocation list, and the Root stays offline. After revoking, you make and import that list (the next step).',
+  'revokeCa.confirm': 'I understand this cannot be undone.',
+  'revokeCa.submit': 'Revoke intermediate',
+  'revokeCa.done': 'Revoked. This service no longer issues from it.',
+  'revokeCa.next': 'Next: publish the Root’s CRL so that clients can see it.',
+  'revokeCa.publishNow': 'Publish the Root’s CRL',
+
+  'rootcrl.title': 'Root CRL: {name}',
+  'rootcrl.intro':
+    'A Root’s revocation list is signed by the Root, which stays offline. Make it on the Root’s machine with the files below, then import the result here.',
+  'rootcrl.entries': 'Revoked intermediates the list must contain',
+  'rootcrl.none':
+    'No intermediate is revoked, so the list will be empty. It is still worth publishing: clients that follow an intermediate’s pointer need to find one.',
+  'rootcrl.col.name': 'Intermediate',
+  'rootcrl.col.serial': 'Serial',
+  'rootcrl.col.reason': 'Reason',
+  'rootcrl.col.date': 'Revoked on',
+  'rootcrl.days': 'List validity (days)',
+  'rootcrl.daysHint':
+    'A Root is rarely powered on, so give the list room, and renew it before it ends even when nothing changed.',
+  'rootcrl.number': 'CRL number',
+  'rootcrl.numberHint': 'Already set in the files below: one above the last list published.',
+  'rootcrl.files': 'Create these files next to the Root’s certificate (root.pem) and private key (root-key.pem):',
+  'rootcrl.run': 'Then run:',
+  'rootcrl.result': 'This produces {file}: import it below.',
+  'rootcrl.prefer': 'openssl’s list carries the CRL number and the reason; cfssl’s has neither. Prefer openssl if you can.',
+  'rootcrl.import': 'Import the signed list',
+  'rootcrl.importCert': 'The Root’s CRL (PEM, DER or cfssl’s base64)',
+  'rootcrl.importHint': 'Paste it, or choose the file the command produced.',
+  'rootcrl.submit': 'Publish CRL',
+  'rootcrl.published': 'Published. List No. {n}, valid until {date}, naming {count} revoked intermediate(s).',
+  'rootcrl.publishedNoNumber': 'Published. Valid until {date}, naming {count} revoked intermediate(s).',
+  'rootcrl.last': 'Last published list: valid until {date}.',
+  'rootcrl.loadError': 'Could not load what the list must contain.',
+
+  'crl.health.retired': 'Retired',
+  'crl.health.awaiting': 'Waiting for the Root’s list',
+  'crl.hint.retired': 'This CA is revoked: it issues nothing and signs no more lists.',
+  'crl.kind.root': 'Root, list signed offline',
+  'crl.publishRoot': 'Publish Root CRL',
+  'crl.alert.rootAwaiting':
+    'The Root {name} has revoked intermediates but no revocation list that names them. Clients that check the Root’s list cannot see those revocations until you publish one.',
+  'crl.alert.rootBehind':
+    'The revocation list of the Root {name} does not name every revoked intermediate. Publish an updated one.',
+  'crl.alert.rootExpired':
+    'The revocation list of the Root {name} has expired. Clients that check it will refuse every certificate chained to this Root. Make a new list on the Root’s machine and import it.',
+
+  'sign.pointers': 'The recipe also writes the addresses of the Root’s CRL and certificate into the intermediate, so that clients can check it later.',
+  'sign.noPointers':
+    'No public address is configured, so the intermediate will carry no pointer to the Root’s CRL. Set the server’s public URL to add one.',
 } as const;
 
 export type MessageKey = keyof typeof en;
