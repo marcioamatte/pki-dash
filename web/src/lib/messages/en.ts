@@ -309,6 +309,55 @@ export const en = {
   'pending.import.cert': 'Signed certificate (PEM)',
   'pending.import.hint': 'Paste it, or choose the file the signing command produced.',
   'pending.import.submit': 'Import',
+
+  'certs.revoked': 'Revoked',
+  'certs.revokedOn': 'Revoked on {date}: {reason}',
+  'certs.hideRevoked': 'Hide revoked certificates',
+  'reason.key_compromise': 'Key compromised or leaked',
+  'reason.superseded': 'Replaced by a new certificate',
+  'reason.cessation_of_operation': 'No longer in use (host or service retired)',
+  'reason.affiliation_changed': 'Owner or affiliation changed',
+  'reason.unspecified': 'Another reason',
+
+  'revoke.button': 'Revoke',
+  'revoke.title': 'Revoke {name}',
+  'revoke.intro':
+    'Revoking tells clients to stop trusting this certificate. It cannot be undone: to use the same name again you issue a new certificate.',
+  'revoke.reason': 'Reason',
+  'revoke.reasonPlaceholder': 'Choose a reason…',
+  'revoke.confirm': 'I understand this cannot be undone.',
+  'revoke.submit': 'Revoke certificate',
+  'revoke.lockedNote':
+    'The vault is locked. The revocation is recorded now and published in the next revocation list when you unlock the vault.',
+  'revoke.done.published': 'Revoked. The new revocation list has been published.',
+  'revoke.done.pending':
+    'Revoked and recorded. It will be published when the vault is unlocked; until then, clients still see the previous list.',
+  'revoke.done.cannot':
+    'Revoked and recorded, but this CA cannot publish a revocation list (its certificate has no cRLSign key usage), so clients will not see it.',
+
+  'crl.title': 'Revocation lists',
+  'crl.subtitle': 'Each intermediate publishes a list of revoked certificates that clients can check.',
+  'crl.refresh': 'Refresh now',
+  'crl.refreshed': 'Revocation lists renewed.',
+  'crl.download': 'Download CRL',
+  'crl.col.ca': 'Intermediate',
+  'crl.col.status': 'Status',
+  'crl.col.list': 'List',
+  'crl.col.validUntil': 'Valid until',
+  'crl.col.revoked': 'Revoked',
+  'crl.number': 'No. {n}',
+  'crl.revokedCount': '{revoked} ({inList} in the list)',
+  'crl.health.ok': 'Up to date',
+  'crl.health.behind': 'Behind',
+  'crl.health.expired': 'Expired',
+  'crl.health.none': 'Not published yet',
+  'crl.health.cannot_sign': 'Cannot publish',
+  'crl.hint.cannot_sign':
+    'This CA’s certificate has no cRLSign key usage, so it cannot sign a list. Revocations are recorded, but clients cannot see them.',
+  'crl.alert.expired':
+    'The revocation list of {name} has expired. Clients that check revocation will refuse its certificates until it is renewed. Unlock the vault to renew it.',
+  'crl.alert.behind':
+    'Some revocations of {name} are recorded but not published yet. Unlock the vault, or press Refresh now, to publish them.',
 } as const;
 
 export type MessageKey = keyof typeof en;

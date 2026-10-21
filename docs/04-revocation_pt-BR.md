@@ -12,6 +12,14 @@ Você pode revogar um certificado de serviço (uma chave que vazou, um host desa
 - Uma CRL vale por **7 dias** e é reemitida **na hora a cada revogação**, **a cada 24 horas** e **quando o cofre é desbloqueado**. A janela de 7 dias faz com que um cofre bloqueado durante um fim de semana longo não leve os clientes a recusar tudo.
 - A revogação é **registrada na hora, mesmo com o cofre bloqueado** (uma chave vazada precisa deixar de valer aqui imediatamente). Assinar a CRL exige a chave da CA, então nesse caso ela é publicada assim que você desbloqueia. Até lá o painel mostra a CRL como *atrasada*, e a API responde `crl_published: false`.
 
+## Na interface web
+
+Na página de **Certificados**:
+
+- **Revogar**, ao lado de cada certificado (admins e operadores). Você escolhe um motivo e marca que não dá para desfazer. Se o cofre estiver bloqueado, o diálogo avisa que a revogação será registrada agora e publicada ao desbloquear.
+- Certificados revogados aparecem riscados com o selo **Revogado** (passe o mouse para ver a data e o motivo). **Ocultar certificados revogados** tira esses da lista.
+- **Listas de revogação** mostra, para cada intermediária, se a lista está *Em dia*, *Atrasada* (uma revogação foi registrada mas não publicada, normalmente porque o cofre está bloqueado), *Expirada* (clientes que checam vão recusar os certificados dela), *Ainda não publicada* ou *Não consegue publicar*. **Atualizar agora** reemite as listas; **Baixar CRL** entrega o PEM. Um aviso aparece para qualquer lista atrasada ou expirada. Depois de desbloquear o cofre, a página se atualiza sozinha.
+
 ## Publicação: o listener público
 
 Os clientes baixam CRLs por HTTP puro, e um cliente que ainda não confia no TLS do próprio pki-dash precisa conseguir baixá-las. Por isso as CRLs são servidas por um **segundo listener, separado**, que não faz mais nada:

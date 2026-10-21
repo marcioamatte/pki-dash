@@ -99,6 +99,23 @@ export interface Cert {
   not_after: string;
   key_generated: boolean;
   created_at: string;
+  revoked: boolean;
+  revoked_at?: string;
+  revocation_reason?: string;
+}
+export interface Crl {
+  ca_id: string;
+  ca_name: string;
+  key_held: boolean;
+  can_sign: boolean;
+  published: boolean;
+  number?: number;
+  this_update?: string;
+  next_update?: string;
+  revoked: number;
+  in_list: number;
+  stale: boolean;
+  expired: boolean;
 }
 export interface NewCert {
   common_name: string;
@@ -194,11 +211,17 @@ export const api = {
     request<CA>('POST', `/intermediate-requests/${encodeURIComponent(id)}/import`, { certificate_pem }),
   cancelRequest: (id: string) => request<void>('DELETE', `/intermediate-requests/${encodeURIComponent(id)}`),
 
+  revokeCert: (id: string, reason: string) =>
+    request<{ revoked_at: string; reason: string; crl_published: boolean }>('POST', `/certificates/${encodeURIComponent(id)}/revoke`, { reason }),
+  crlStatus: () => request<Crl[]>('GET', '/crls'),
+  refreshCrls: () => request<void>('POST', '/crls/refresh'),
+
   listCerts: (caId?: string) => request<Cert[]>('GET', '/certificates' + (caId ? `?ca_id=${encodeURIComponent(caId)}` : '')),
   issueCert: (caId: string, b: NewCert) => request<Issued>('POST', `/cas/${encodeURIComponent(caId)}/certificates`, b),
 };
 
 export const downloadURL = {
+  crl: (caId: string) => `${base}/cas/${encodeURIComponent(caId)}/crl`,
   requestCSR: (id: string) => `${base}/intermediate-requests/${encodeURIComponent(id)}/csr`,
   certPEM: (id: string) => `${base}/certificates/${encodeURIComponent(id)}/pem`,
   certFullchain: (id: string) => `${base}/certificates/${encodeURIComponent(id)}/fullchain`,

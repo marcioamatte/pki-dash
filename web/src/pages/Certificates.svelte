@@ -1,23 +1,29 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Alert from '../components/Alert.svelte';
+  import CrlStatus from '../components/CrlStatus.svelte';
   import VaultGate from '../components/VaultGate.svelte';
-  import { api, downloadURL, type CA, type Cert } from '../lib/api';
+  import { api, downloadURL, type CA, type Cert, type Crl } from '../lib/api';
   import { errorMessage } from '../lib/errors';
   import { formatDate, t } from '../lib/i18n.svelte';
   import { daysLeft, expiryState } from '../lib/names';
-  import { canIssue, session } from '../lib/session.svelte';
+  import { isReason } from '../lib/revocation';
+  import { canIssue, canRevoke, session } from '../lib/session.svelte';
   import IssueCert from './IssueCert.svelte';
+  import RevokeCert from './RevokeCert.svelte';
 
   let certs = $state<Cert[] | null>(null);
   let cas = $state<CA[]>([]);
   let filter = $state('');
   let error = $state('');
   let issuing = $state(false);
+  let crls = $state<Crl[]>([]);
+  let revoking = $state<Cert | null>(null);
+  let hideRevoked = $state(false);
 
   async function load() {
     try {
-      [certs, cas] = await Promise.all([api.listCerts(filter || undefined), api.listCAs()]);
+      [certs, cas, crls] = await Promise.all([api.listCerts(filter || undefined), api.listCAs(), api.crlStatus()]);
       error = '';
     } catch (e) {
       error = errorMessage(e);
@@ -25,10 +31,22 @@
   }
   onMount(load);
 
+  // Unlocking the vault makes the server publish any pending revocations, so
+  // what is on screen is out of date the moment the vault changes state.
+  let lastReady: boolean | null = null;
+  $effect(() => {
+    const ready = session.vault.initialized && session.vault.unlocked;
+    if (lastReady !== null && ready !== lastReady) load();
+    lastReady = ready;
+  });
+
   const issuerName = (id: string) => cas.find((c) => c.id === id)?.name ?? '—';
   const issuers = $derived(cas.filter((c) => c.kind === 'intermediate' && c.key_held));
   const intermediates = $derived(cas.filter((c) => c.kind === 'intermediate'));
   const vaultReady = $derived(session.vault.initialized && session.vault.unlocked);
+  const shown = $derived((certs ?? []).filter((c) => !(hideRevoked && c.revoked)));
+  const reasonLabel = (r?: string) => (isReason(r) ? t(`reason.${r}`) : '');
+  const canPublish = (c: Cert) => crls.find((x) => x.ca_id === c.ca_id)?.can_sign ?? true;
 </script>
 
 {#if !vaultReady}<VaultGate />{/if}
@@ -45,8 +63,13 @@
   {/if}
 </div>
 
+{#if crls.length > 0}
+  <CrlStatus items={crls} canManage={canRevoke()} {vaultReady} onChanged={load} />
+{/if}
+
+<div class="mb-4 flex flex-wrap items-end gap-4">
 {#if intermediates.length > 1}
-  <div class="mb-4 max-w-xs">
+  <div class="max-w-xs">
     <label class="label" for="filter">{t('certs.filter')}</label>
     <select id="filter" class="input" bind:value={filter} onchange={load}>
       <option value="">{t('certs.filter.all')}</option>
@@ -54,6 +77,11 @@
     </select>
   </div>
 {/if}
+  <label class="flex items-center gap-2 pb-2 text-sm">
+    <input type="checkbox" bind:checked={hideRevoked} />
+    {t('certs.hideRevoked')}
+  </label>
+</div>
 
 {#if error}
   <Alert>{error}</Alert>
@@ -74,11 +102,19 @@
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-        {#each certs as c (c.id)}
+        {#each shown as c (c.id)}
           {@const state = expiryState(c.not_after)}
-          <tr>
+          <tr class={c.revoked ? 'opacity-70' : ''}>
             <td class="px-4 py-3">
-              <div class="font-medium">{c.common_name}</div>
+              <div class="font-medium {c.revoked ? 'line-through' : ''}">
+                {c.common_name}
+                {#if c.revoked}
+                  <span
+                    class="badge ml-1 bg-red-100 text-red-800 no-underline dark:bg-red-950 dark:text-red-200"
+                    title={t('certs.revokedOn', { date: formatDate(c.revoked_at ?? ''), reason: reasonLabel(c.revocation_reason) })}
+                  >{t('certs.revoked')}</span>
+                {/if}
+              </div>
               <div class="max-w-xs truncate text-xs text-slate-500 dark:text-slate-400" title={c.sans.join(', ')}>{c.sans.join(', ')}</div>
             </td>
             <td class="px-4 py-3">{issuerName(c.ca_id)}</td>
@@ -95,6 +131,10 @@
               <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.certPEM(c.id)} download>{t('certs.download.cert')}</a>
               <span class="text-slate-300 dark:text-slate-700"> · </span>
               <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.certFullchain(c.id)} download>{t('certs.download.fullchain')}</a>
+              {#if canRevoke() && !c.revoked}
+                <span class="text-slate-300 dark:text-slate-700"> · </span>
+                <button type="button" class="text-red-700 hover:underline dark:text-red-400" onclick={() => (revoking = c)}>{t('revoke.button')}</button>
+              {/if}
             </td>
           </tr>
         {/each}
@@ -105,4 +145,8 @@
 
 {#if issuing}
   <IssueCert {issuers} onIssued={load} onClose={() => (issuing = false)} />
+{/if}
+
+{#if revoking}
+  <RevokeCert cert={revoking} canPublish={canPublish(revoking)} onRevoked={load} onClose={() => (revoking = null)} />
 {/if}

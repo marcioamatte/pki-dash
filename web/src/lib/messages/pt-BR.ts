@@ -308,4 +308,53 @@ export const ptBR: Record<MessageKey, string> = {
   'pending.import.cert': 'Certificado assinado (PEM)',
   'pending.import.hint': 'Cole-o, ou escolha o arquivo que o comando de assinatura gerou.',
   'pending.import.submit': 'Importar',
+
+  'certs.revoked': 'Revogado',
+  'certs.revokedOn': 'Revogado em {date}: {reason}',
+  'certs.hideRevoked': 'Ocultar certificados revogados',
+  'reason.key_compromise': 'Chave comprometida ou vazada',
+  'reason.superseded': 'Substituído por um novo certificado',
+  'reason.cessation_of_operation': 'Fora de uso (host ou serviço desativado)',
+  'reason.affiliation_changed': 'Dono ou vínculo mudou',
+  'reason.unspecified': 'Outro motivo',
+
+  'revoke.button': 'Revogar',
+  'revoke.title': 'Revogar {name}',
+  'revoke.intro':
+    'Revogar diz aos clientes para deixarem de confiar neste certificado. Não dá para desfazer: para usar o mesmo nome de novo, você emite um novo certificado.',
+  'revoke.reason': 'Motivo',
+  'revoke.reasonPlaceholder': 'Escolha um motivo…',
+  'revoke.confirm': 'Entendo que isso não pode ser desfeito.',
+  'revoke.submit': 'Revogar certificado',
+  'revoke.lockedNote':
+    'O cofre está bloqueado. A revogação é registrada agora e publicada na próxima lista de revogação quando você desbloquear o cofre.',
+  'revoke.done.published': 'Revogado. A nova lista de revogação foi publicada.',
+  'revoke.done.pending':
+    'Revogado e registrado. Será publicado quando o cofre for desbloqueado; até lá, os clientes ainda veem a lista anterior.',
+  'revoke.done.cannot':
+    'Revogado e registrado, mas esta CA não consegue publicar uma lista de revogação (o certificado dela não tem o uso de chave cRLSign), então os clientes não verão.',
+
+  'crl.title': 'Listas de revogação',
+  'crl.subtitle': 'Cada intermediária publica uma lista de certificados revogados que os clientes podem consultar.',
+  'crl.refresh': 'Atualizar agora',
+  'crl.refreshed': 'Listas de revogação renovadas.',
+  'crl.download': 'Baixar CRL',
+  'crl.col.ca': 'Intermediária',
+  'crl.col.status': 'Situação',
+  'crl.col.list': 'Lista',
+  'crl.col.validUntil': 'Válida até',
+  'crl.col.revoked': 'Revogados',
+  'crl.number': 'Nº {n}',
+  'crl.revokedCount': '{revoked} ({inList} na lista)',
+  'crl.health.ok': 'Em dia',
+  'crl.health.behind': 'Atrasada',
+  'crl.health.expired': 'Expirada',
+  'crl.health.none': 'Ainda não publicada',
+  'crl.health.cannot_sign': 'Não consegue publicar',
+  'crl.hint.cannot_sign':
+    'O certificado desta CA não tem o uso de chave cRLSign, então ela não consegue assinar uma lista. As revogações são registradas, mas os clientes não as veem.',
+  'crl.alert.expired':
+    'A lista de revogação de {name} expirou. Clientes que checam revogação vão recusar os certificados dela até que seja renovada. Desbloqueie o cofre para renová-la.',
+  'crl.alert.behind':
+    'Algumas revogações de {name} estão registradas mas ainda não foram publicadas. Desbloqueie o cofre, ou clique em Atualizar agora, para publicá-las.',
 };

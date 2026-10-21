@@ -12,6 +12,14 @@ You can revoke a service certificate (a leaked key, a decommissioned host), and 
 - A CRL is valid for **7 days** and is reissued **immediately on every revocation**, **every 24 hours**, and **when the vault is unlocked**. The 7-day window means a locked vault over a long weekend does not make clients reject everything.
 - The revocation is **recorded at once even if the vault is locked** (a leaked key must stop being valid here immediately). Signing a CRL needs the CA's key, so in that case the CRL is published as soon as you unlock. Until then the dashboard shows the CRL as *behind*, and the API answers `crl_published: false`.
 
+## In the web UI
+
+On the **Certificates** page:
+
+- **Revoke** next to a certificate (admins and operators). You choose a reason and tick that it cannot be undone. If the vault is locked the dialog says the revocation will be recorded now and published on unlock.
+- Revoked certificates are struck through with a **Revoked** badge (hover for the date and reason). **Hide revoked certificates** removes them from the list.
+- **Revocation lists** shows, for each intermediate, whether its list is *Up to date*, *Behind* (a revocation is recorded but not published, usually because the vault is locked), *Expired* (clients that check will refuse its certificates), *Not published yet*, or *Cannot publish*. **Refresh now** reissues the lists; **Download CRL** gives the PEM. A banner appears for any list that is behind or expired. After you unlock the vault, the page updates itself.
+
 ## Publishing: the public listener
 
 Clients fetch CRLs over plain HTTP, and a client that does not yet trust pki-dash's own TLS certificate must still be able to get them. So CRLs are served by a **second, separate listener** that does nothing else:
