@@ -40,9 +40,12 @@ type ParsedCRL struct {
 // decodeCRL turns what a person might paste or upload into DER. It accepts PEM
 // ("X509 CRL"), raw DER, and bare base64 of the DER, which is what
 // "cfssl gencrl" prints.
+//
+// Binary DER must never be whitespace-trimmed: its last byte (part of a random
+// signature) is occasionally 0x0a or 0x20, and cutting it corrupts the file.
+// So DER is recognised by its structure first, and only text is trimmed.
 func decodeCRL(data []byte) ([]byte, error) {
-	data = bytes.TrimSpace(data)
-	if len(data) == 0 {
+	if len(bytes.TrimSpace(data)) == 0 {
 		return nil, fmt.Errorf("%w: empty CRL", ErrInvalidRequest)
 	}
 	if blk, _ := pem.Decode(data); blk != nil {
@@ -51,8 +54,12 @@ func decodeCRL(data []byte) ([]byte, error) {
 		}
 		return blk.Bytes, nil
 	}
-	if data[0] == 0x30 { // an ASN.1 SEQUENCE: already DER
-		return data, nil
+	body := bytes.TrimLeft(data, " \t\r\n")
+	if body[0] == 0x30 { // an ASN.1 SEQUENCE: probably raw DER
+		var raw asn1.RawValue
+		if rest, err := asn1.Unmarshal(body, &raw); err == nil && len(bytes.TrimSpace(rest)) == 0 {
+			return raw.FullBytes, nil // exactly the element; a trailing newline is not part of it
+		}
 	}
 	clean := strings.Join(strings.Fields(string(data)), "")
 	der, err := base64.StdEncoding.DecodeString(clean)

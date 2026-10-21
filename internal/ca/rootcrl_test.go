@@ -1,6 +1,7 @@
 package ca
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -183,5 +184,47 @@ func TestCAReasons(t *testing.T) {
 	}
 	if ValidReason(ReasonCACompromise) {
 		t.Fatal("cACompromise must stay invalid for a service certificate")
+	}
+}
+
+// Raw DER is binary: whatever its last byte is, it must come out exactly as it
+// went in. Random signatures made this fail about once in 40 runs, so pin it
+// with bytes chosen to be whitespace.
+func TestDecodeCRLNeverTrimsBinaryDER(t *testing.T) {
+	for _, last := range []byte{0x0a, 0x0d, 0x20, 0x09, 0x0b, 0x0c} {
+		der := []byte{0x30, 0x03, 0x04, 0x01, last} // SEQUENCE { OCTET STRING <last> }
+		got, err := decodeCRL(der)
+		if err != nil || !bytes.Equal(got, der) {
+			t.Errorf("last byte %#x: got %x, %v; want %x", last, got, err, der)
+		}
+		// A newline added by an editor or by curl is not part of the DER.
+		got, err = decodeCRL(append(append([]byte{}, der...), '\n'))
+		if err != nil || !bytes.Equal(got, der) {
+			t.Errorf("last byte %#x plus a trailing newline: got %x, %v", last, got, err)
+		}
+		got, err = decodeCRL(append([]byte("\n  "), der...))
+		if err != nil || !bytes.Equal(got, der) {
+			t.Errorf("last byte %#x with leading whitespace: got %x, %v", last, got, err)
+		}
+	}
+	// Text that merely starts with '0' (0x30) is still taken as base64 or refused, never as DER.
+	if _, err := decodeCRL([]byte("0 not a crl")); !errors.Is(err, ErrInvalidRequest) {
+		t.Errorf("text starting with 0: %v", err)
+	}
+}
+
+// And through the whole verification, with many real signatures, so the format
+// test cannot pass by luck.
+func TestVerifyRootCRLRawDERManyTimes(t *testing.T) {
+	f := newRootCRLFixture(t)
+	for i := 0; i < 300; i++ {
+		der := f.crl(t, int64(i+1), entry(int64(1000+i), ReasonSuperseded))
+		got, err := VerifyRootCRL(f.rootPEM, der, time.Now())
+		if err != nil {
+			t.Fatalf("run %d (last byte %#x): %v", i, der[len(der)-1], err)
+		}
+		if !bytes.Equal(got.DER, der) {
+			t.Fatalf("run %d: DER changed", i)
+		}
 	}
 }
