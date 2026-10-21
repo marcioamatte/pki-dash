@@ -9,7 +9,9 @@
 # ["-tls-self-signed"]: browsers will warn about the throwaway certificate.
 services:
   pki-dash:
-    build: .                 # no published image yet: this builds it from this checkout
+    # Builds from this checkout. To use a published release instead, drop "build" and set
+    # image: ghcr.io/marcioamatte/pki-dash:<version> (docs/06-installation.md).
+    build: .
     image: pki-dash:local
     # Behind a TLS-terminating proxy (docs/02-deployment.md): use "-insecure-http" instead of the
     # TLS options and add "-trusted-proxies=<the proxy's address>"; the proxy must append X-Forwarded-For.

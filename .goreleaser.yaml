@@ -1,0 +1,205 @@
+# Release pipeline: `git tag v0.1.0 && git push origin v0.1.0` runs it (see
+# .github/workflows/release.yml). To try it without publishing anything:
+#   make snapshot
+version: 2
+project_name: pki-dash
+
+before:
+  hooks:
+    # The binary embeds web/dist, so the UI is built first (the workflow also
+    # type-checks and tests it before getting here).
+    - sh -c 'cd web && npm ci && npm run build'
+
+builds:
+  - id: pki-dash-linux
+    main: ./cmd/pki-dash
+    binary: pki-dash
+    env:
+      - CGO_ENABLED=0 # SQLite is the pure-Go driver: no C toolchain, and every target here cross-compiles
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos: [linux]
+    goarch: [amd64, arm64]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+  # Kept apart from Linux so their archives carry no systemd files.
+  - id: pki-dash-other
+    main: ./cmd/pki-dash
+    binary: pki-dash
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos: [darwin, windows]
+    goarch: [amd64, arm64]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: archive-linux
+    ids: [pki-dash-linux]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - LICENSE
+      - THIRD_PARTY_NOTICES.md
+      - README.md
+      - README_pt-BR.md
+      - src: docs/*.md
+        dst: docs
+      # The unit file and example settings, for a manual install.
+      - src: packaging/pki-dash.service
+        dst: packaging/pki-dash.service
+      - src: packaging/pki-dash.env
+        dst: packaging/pki-dash.env
+      - src: packaging/oidc.env.example
+        dst: packaging/oidc.env.example
+      - src: packaging/pki-dash.sysusers
+        dst: packaging/pki-dash.sysusers
+  - id: archive-other
+    ids: [pki-dash-other]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - THIRD_PARTY_NOTICES.md
+      - README.md
+      - README_pt-BR.md
+      - src: docs/*.md
+        dst: docs
+
+nfpms:
+  - id: packages
+    ids: [pki-dash-linux]
+    package_name: pki-dash
+    file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Arch }}"
+    vendor: pki-dash
+    homepage: https://github.com/marcioamatte/pki-dash
+    maintainer: Marcio Amatte <marcioamatte@gmail.com>
+    description: |-
+      Web dashboard for managing an internal PKI, built on cfssl.
+      Create a Root and intermediate CAs, sign service certificates, revoke them
+      and publish CRLs. For internal and lab environments.
+    license: MIT
+    formats: [deb, rpm]
+    bindir: /usr/bin
+    recommends: [systemd]
+    contents:
+      - src: packaging/pki-dash.service
+        dst: /usr/lib/systemd/system/pki-dash.service
+        file_info: {mode: 0644}
+      - src: packaging/pki-dash.sysusers
+        dst: /usr/lib/sysusers.d/pki-dash.conf
+        file_info: {mode: 0644}
+      # The settings are the operator's: an upgrade never overwrites them.
+      - src: packaging/pki-dash.env
+        dst: /etc/pki-dash/pki-dash.env
+        type: config|noreplace
+        file_info: {mode: 0644}
+      # An example, not a setting: it is refreshed on upgrade. SSO stays off until
+      # the operator copies it to oidc.env.
+      - src: packaging/oidc.env.example
+        dst: /etc/pki-dash/oidc.env.example
+        file_info: {mode: 0644}
+      - src: LICENSE
+        dst: /usr/share/doc/pki-dash/LICENSE
+        file_info: {mode: 0644}
+      - src: THIRD_PARTY_NOTICES.md
+        dst: /usr/share/doc/pki-dash/THIRD_PARTY_NOTICES.md
+        file_info: {mode: 0644}
+      - src: README.md
+        dst: /usr/share/doc/pki-dash/README.md
+        file_info: {mode: 0644}
+      - src: README_pt-BR.md
+        dst: /usr/share/doc/pki-dash/README_pt-BR.md
+        file_info: {mode: 0644}
+      - src: docs/*.md
+        dst: /usr/share/doc/pki-dash/docs
+        file_info: {mode: 0644}
+    scripts:
+      postinstall: packaging/postinstall.sh
+      preremove: packaging/preremove.sh
+      postremove: packaging/postremove.sh
+    rpm:
+      summary: Web dashboard for managing an internal PKI
+      group: Applications/System
+
+dockers_v2:
+  - id: image
+    ids: [pki-dash-linux]
+    dockerfile: Dockerfile
+    images:
+      - ghcr.io/marcioamatte/pki-dash
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .Prerelease }}{{ .Major }}.{{ .Minor }}{{ end }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms: [linux/amd64, linux/arm64]
+    flags:
+      - --target=release # the stage that takes the binary built above (see Dockerfile)
+    build_args:
+      VERSION: "{{ .Version }}"
+    extra_files:
+      - packaging/docker/data
+    labels:
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .Date }}"
+    sbom: true # the image's SBOM travels with it, as a build attestation
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+# One SBOM (SPDX) per archive, made by Syft.
+sboms:
+  - artifacts: archive
+
+# Keyless: the signature is tied to this workflow's identity and logged publicly
+# (Sigstore). No private key exists to leak. Verify with `cosign verify-blob`
+# (see docs/06-installation.md).
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - --yes
+    artifacts: checksum
+
+docker_signs:
+  - cmd: cosign
+    args:
+      - sign
+      - "${artifact}@${digest}"
+      - --yes
+    artifacts: ""
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^Merge pull request"
+
+release:
+  prerelease: auto
+  footer: |
+    ## Verify what you downloaded
+
+    ```
+    cosign verify-blob \
+      --certificate-identity "https://github.com/marcioamatte/pki-dash/.github/workflows/release.yml@refs/tags/{{ .Tag }}" \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+      --bundle checksums.txt.sigstore.json checksums.txt
+    sha256sum --check --ignore-missing checksums.txt
+    ```
+
+    Container image: `ghcr.io/marcioamatte/pki-dash:{{ .Version }}` (signed the same way: see the installation guide).
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"

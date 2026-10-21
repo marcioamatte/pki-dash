@@ -54,6 +54,15 @@ func env(name, def string) string {
 	return def
 }
 
+// envBool reads a yes/no environment variable: 1, true, yes or on.
+func envBool(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(name))) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
+}
+
 func run(ctx context.Context, args []string) error {
 	if len(args) > 0 && args[0] == "healthcheck" {
 		return healthcheck(args[1:])
@@ -63,14 +72,14 @@ func run(ctx context.Context, args []string) error {
 	listen := fs.String("listen", env("PKI_DASH_LISTEN", "127.0.0.1:8443"), "address to listen on (env PKI_DASH_LISTEN)")
 	certFile := fs.String("tls-cert", env("PKI_DASH_TLS_CERT", ""), "TLS certificate file (env PKI_DASH_TLS_CERT)")
 	keyFile := fs.String("tls-key", env("PKI_DASH_TLS_KEY", ""), "TLS private key file (env PKI_DASH_TLS_KEY)")
-	selfSigned := fs.Bool("tls-self-signed", false, "serve TLS with a throwaway self-signed certificate (labs only)")
+	selfSigned := fs.Bool("tls-self-signed", envBool("PKI_DASH_TLS_SELF_SIGNED"), "serve TLS with a throwaway self-signed certificate (labs only) (env PKI_DASH_TLS_SELF_SIGNED)")
 	pkiListen := fs.String("pki-listen", env("PKI_DASH_PKI_LISTEN", ""), "address of the public, read-only listener that serves CRLs and CA certificates over plain HTTP, e.g. 0.0.0.0:8080 (env PKI_DASH_PKI_LISTEN)")
 	publicURL := fs.String("public-url", env("PKI_DASH_PUBLIC_URL", ""), "how clients reach that listener, e.g. http://pki.lab:8080; written into issued certificates (env PKI_DASH_PUBLIC_URL)")
 	var o oidcFlags
 	o.register(fs)
 	proxies := fs.String("trusted-proxies", env("PKI_DASH_TRUSTED_PROXIES", ""), "comma-separated addresses or CIDR ranges of the reverse proxies in front of pki-dash, e.g. 10.0.0.5,172.18.0.0/16; their X-Forwarded-* headers are believed, and sessions are always marked Secure (env PKI_DASH_TRUSTED_PROXIES)")
 	showVersion := fs.Bool("version", false, "print the version and exit")
-	insecure := fs.Bool("insecure-http", false, "serve plain HTTP: development, or behind a TLS-terminating proxy you trust")
+	insecure := fs.Bool("insecure-http", envBool("PKI_DASH_INSECURE_HTTP"), "serve plain HTTP: development, or behind a TLS-terminating proxy you trust (env PKI_DASH_INSECURE_HTTP)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -130,7 +139,9 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	if oidcProv != nil {
+	if oidcProv == nil {
+		log.Info("OIDC sign-in is off: local accounts only")
+	} else {
 		// Only a log line: the provider is contacted again, and retried, at the first sign-in.
 		if err := oidcProv.Check(ctx); err != nil {
 			log.Warn("OIDC provider not reachable yet; it will be retried at sign-in", "err", err)
