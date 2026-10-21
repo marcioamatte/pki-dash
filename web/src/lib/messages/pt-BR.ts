@@ -293,6 +293,10 @@ export const ptBR: Record<MessageKey, string> = {
   'sign.result': 'Isso gera {file}: importe esse arquivo aqui.',
   'sign.days': 'Validade (dias)',
   'sign.daysHint': 'Limitada para terminar antes da Root.',
+  'sign.domains': 'Domínios para os quais esta intermediária pode emitir (opcional)',
+  'sign.domainsHint': 'Um ou mais, por exemplo lab, mattegroup.example. Cada um vale para ele mesmo e tudo abaixo dele. Os clientes rejeitam certificados fora deles, então uma chave vazada não serve para outros nomes.',
+  'sign.domainsInvalid': 'Domínio inválido: {list}',
+  'sign.cfsslNoConstraints': 'A linha de comando do cfssl não consegue incluir restrições de nome. Use a aba openssl ou limpe os domínios.',
   'sign.rootFiles': 'Troque root.pem / root-key.pem (ou root.crt / root.key) pelo certificado e pela chave privada da sua Root.',
 
   'pending.title': 'Aguardando certificado assinado',

@@ -77,6 +77,14 @@ Um certificado só é aceito se tudo isto valer, então um engano (ou um arquivo
 
 Uma importação recusada deixa a requisição no lugar, então você pode corrigir o certificado e tentar de novo, ou cancelar a requisição, o que descarta a chave dela.
 
+## Limitando para quais nomes uma intermediária pode emitir
+
+Nas instruções de assinatura você pode listar **domínios** (por exemplo `lab, mattegroup.example`). A receita do openssl então inclui na intermediária uma extensão `nameConstraints` crítica: todo cliente que valida a cadeia rejeita um certificado para qualquer outro nome, mesmo que a chave da intermediária vaze. Um domínio vale para ele mesmo e tudo abaixo dele.
+
+- **Só a receita do openssl consegue.** A linha de comando do cfssl não tem como incluir a extensão; com domínios listados, a aba do cfssl avisa isso em vez de mostrar uma receita que os deixaria de fora em silêncio.
+- O serviço lê as restrições do certificado importado e **recusa emitir** para nomes fora delas (nomes DNS e faixas de IP), em vez de produzir um certificado que nenhum cliente aceitaria.
+- Coloque as restrições na intermediária, não na Root, para limitar uma intermediária sem mexer nas outras.
+
 ## Observações
 
 - A validade da Root precisa ultrapassar a da intermediária. Escolha `-days` / `expiry` de acordo.

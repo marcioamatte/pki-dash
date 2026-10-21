@@ -294,6 +294,10 @@ export const en = {
   'sign.result': 'This produces {file}: import that file here.',
   'sign.days': 'Validity (days)',
   'sign.daysHint': 'Limited to end before the Root does.',
+  'sign.domains': 'Domains this intermediate may issue for (optional)',
+  'sign.domainsHint': 'One or more, e.g. lab, mattegroup.example. Each covers itself and everything below it. Clients reject certificates outside them, so a leaked key cannot be used for other names.',
+  'sign.domainsInvalid': 'Not a valid domain: {list}',
+  'sign.cfsslNoConstraints': 'cfssl\'s command line cannot add name constraints. Use the openssl tab, or clear the domains.',
   'sign.rootFiles': 'Replace root.pem / root-key.pem (or root.crt / root.key) with your Root’s certificate and private key.',
 
   'pending.title': 'Waiting for a signed certificate',

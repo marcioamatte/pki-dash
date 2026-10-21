@@ -188,6 +188,9 @@ func (a *Authority) IssueLeaf(r LeafRequest, now time.Time) (*Bundle, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := a.checkNameConstraints(hosts); err != nil {
+		return nil, err
+	}
 	nb, na, err := validityWindow(now, r.Validity, a.cert)
 	if err != nil {
 		return nil, err
@@ -244,6 +247,39 @@ func (a *Authority) IssueLeaf(r LeafRequest, now time.Time) (*Bundle, error) {
 		return nil, fmt.Errorf("ca: sign leaf: %w", err)
 	}
 	return &Bundle{CertPEM: certPEM, KeyPEM: keyPEM}, nil
+}
+
+// checkNameConstraints refuses names that this CA's own nameConstraints would
+// make every client reject, so no one issues a certificate that cannot work.
+func (a *Authority) checkNameConstraints(hosts []string) error {
+	for _, h := range hosts {
+		if ip := net.ParseIP(h); ip != nil {
+			if len(a.cert.PermittedIPRanges) == 0 {
+				continue
+			}
+			ok := false
+			for _, n := range a.cert.PermittedIPRanges {
+				ok = ok || n.Contains(ip)
+			}
+			if !ok {
+				return fmt.Errorf("%w: %s is outside the IP ranges this CA may issue for", ErrInvalidRequest, h)
+			}
+			continue
+		}
+		if len(a.cert.PermittedDNSDomains) == 0 {
+			continue
+		}
+		name := strings.TrimPrefix(h, "*.")
+		ok := false
+		for _, d := range a.cert.PermittedDNSDomains {
+			d = strings.ToLower(strings.TrimPrefix(d, "."))
+			ok = ok || name == d || strings.HasSuffix(name, "."+d)
+		}
+		if !ok {
+			return fmt.Errorf("%w: %s is outside the domains this CA may issue for (%s)", ErrInvalidRequest, h, strings.Join(a.cert.PermittedDNSDomains, ", "))
+		}
+	}
+	return nil
 }
 
 func (a *Authority) sign(policy *config.Signing, req signer.SignRequest) ([]byte, error) {
