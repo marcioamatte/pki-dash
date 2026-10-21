@@ -20,10 +20,18 @@ type caDTO struct {
 	NotAfter  string `json:"not_after"`
 	CreatedAt string `json:"created_at"`
 	KeyHeld   bool   `json:"key_held"` // false once a Root's key has been removed
+	Revoked   bool   `json:"revoked"`
+	RevokedAt string `json:"revoked_at,omitempty"`
+	Reason    string `json:"revocation_reason,omitempty"`
 }
 
 func toCA(c store.CA) caDTO {
-	return caDTO{c.ID, c.Name, c.Kind, c.ParentID, rfc3339(c.NotBefore), rfc3339(c.NotAfter), rfc3339(c.CreatedAt), c.KeyBlob != nil}
+	d := caDTO{ID: c.ID, Name: c.Name, Kind: c.Kind, ParentID: c.ParentID, NotBefore: rfc3339(c.NotBefore),
+		NotAfter: rfc3339(c.NotAfter), CreatedAt: rfc3339(c.CreatedAt), KeyHeld: c.KeyBlob != nil}
+	if c.Revoked() {
+		d.Revoked, d.RevokedAt, d.Reason = true, rfc3339(c.RevokedAt), caReasonName(c.RevocationReason)
+	}
+	return d
 }
 
 func (s *Server) listCAs(w http.ResponseWriter, r *http.Request, _ *auth.Session) error {

@@ -52,6 +52,8 @@ The Root is the anchor of trust for everything below it, so the safest place for
      -days 1825 -sha384 -extfile inter.ext -out inter.crt
    ```
 
+   > **Revocation:** if you want clients to be able to check the intermediate against the Root's CRL later, add its address now (`crl_url` and `issuer_urls` in the cfssl profile, or `crlDistributionPoints` and `authorityInfoAccess` in the openssl extensions). See [Revoking an intermediate CA](04-revocation.md#revoking-an-intermediate-ca).
+
 4. **Import the signed certificate** (`POST /api/v1/intermediate-requests/{id}/import`). From then on the intermediate behaves like any other: it issues service certificates, and they verify against the Root you never gave the service.
 
 ## In the web UI

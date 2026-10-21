@@ -122,4 +122,24 @@ CREATE TABLE crls (
 	der           BLOB NOT NULL
 ) STRICT;
 `,
+
+	// 5: revoked intermediates, and the Root's CRL that was signed offline
+	`
+ALTER TABLE cas ADD COLUMN revoked_at INTEGER;
+ALTER TABLE cas ADD COLUMN revocation_reason INTEGER NOT NULL DEFAULT 0
+	CHECK (revocation_reason IN (0, 1, 2, 3, 4, 5));
+
+-- A Root never signs here, so its CRL is made elsewhere and imported. It keeps
+-- the CRL's own number when it has one (cfssl's does not), and the dates that
+-- stop an older list from being put back.
+CREATE TABLE imported_crls (
+	ca_id         TEXT PRIMARY KEY REFERENCES cas(id) ON DELETE RESTRICT,
+	crl_number    INTEGER,
+	this_update   INTEGER NOT NULL,
+	next_update   INTEGER NOT NULL,
+	imported_at   INTEGER NOT NULL,
+	revoked_count INTEGER NOT NULL,
+	der           BLOB NOT NULL
+) STRICT;
+`,
 }

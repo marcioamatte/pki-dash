@@ -64,9 +64,86 @@ Be realistic about this. **Web browsers mostly do not fetch CRLs for private CAs
 
 Use it for mTLS and for services you operate. Do not expect it to make a revoked server certificate disappear from every browser.
 
+## Revoking an intermediate CA
+
+An intermediate is revoked by **its Root**, and the Root stays offline. So this has two halves: the dashboard records the revocation and stops using the CA right away, and **you** bring back a CRL that the Root signed, which the dashboard then publishes in the Root's name.
+
+1. **Revoke** the intermediate (admins only; `POST /api/v1/cas/{id}/revoke`, reasons as for certificates plus `ca_compromise`). From that moment the service **refuses to issue** from it and **signs no more CRLs** with its key. Revoking is final. Certificates it already issued are not listed anywhere until the Root's CRL says the CA itself is revoked, at which point clients reject the whole chain.
+2. **Ask what the Root's CRL must contain** (`GET /api/v1/cas/{root}/crl-request`): the revoked intermediates with their serial numbers (hex and decimal), and the number to give the CRL.
+3. **On the Root's machine, build a complete CRL** with either tool (both tested):
+
+   **cfssl**: put the decimal serials, one per line, in `serials.txt`:
+
+   ```bash
+   cfssl gencrl serials.txt root.pem root-key.pem 15552000 > root-crl.b64     # 15552000 s = 180 days
+   ```
+
+   The output is base64 of the DER, which the importer accepts as it is. cfssl writes no CRL number and no reason code, and dates the list to the second.
+
+   **openssl**: it needs a small CA database. One line per revoked intermediate in `index.txt` (tab-separated; serial in upper-case hex with an even number of digits; dates as `YYMMDDHHMMSSZ`), the number in `crlnumber`, and a `ca.cnf`:
+
+   ```ini
+   # index.txt  (fields separated by TABs)
+   R	351021000000Z	261021025553Z,CACompromise	3BF66B5E5E2E0AD23554366822BEA765B04AA08E	unknown	/CN=Inter A
+
+   # crlnumber
+   01
+
+   # ca.cnf
+   [ca]
+   default_ca = CA_default
+   [CA_default]
+   database = index.txt
+   crlnumber = crlnumber
+   certificate = root.pem
+   private_key = root-key.pem
+   default_md = sha384
+   default_crl_days = 180
+   ```
+
+   ```bash
+   openssl ca -config ca.cnf -gencrl -out root-crl.pem
+   ```
+
+   openssl's list carries the CRL number and the reason, so prefer it if you can.
+4. **Import it** (`POST /api/v1/cas/{root}/crl/import`, PEM, DER or cfssl's base64). The dashboard serves it at the Root's `/crl/<root-id>.crl`.
+
+### What the import checks
+
+It is published in the Root's name, so it is checked first:
+
+- signed by **this Root's key** and issued by its name;
+- a **complete** list: delta and partial CRLs are refused;
+- current: not expired, not dated in the future;
+- **newer than the one already published**, so an old list cannot be put back and quietly un-revoke things. With CRL numbers on both, the number must grow; otherwise (cfssl) its date must be strictly later, which a Root machine with a badly set clock can trip: fix the clock and generate it again;
+- **consistent with this dashboard**: it must list every intermediate revoked here, and none that is not (revoke it here first).
+
+A refusal explains why and changes nothing.
+
+### Make the intermediates point at the Root's list
+
+Clients can only check an intermediate if its certificate says where the Root's CRL is. Add that when you **sign** an intermediate (the recipes in [Keeping the Root offline](03-offline-root.md) use the same files):
+
+```json
+"crl_url": "http://pki.lab:8080/crl/<root-id>.crl",
+"issuer_urls": ["http://pki.lab:8080/ca/<root-id>.crt"],
+```
+(in the cfssl profile, next to `usages`), or in the openssl extensions file:
+
+```ini
+crlDistributionPoints = URI:http://pki.lab:8080/crl/<root-id>.crl
+authorityInfoAccess = caIssuers;URI:http://pki.lab:8080/ca/<root-id>.crt
+```
+
+`<root-id>` is the Root's id, as in the URLs the dashboard shows. **Intermediates signed before this carry no such address**: clients cannot discover the Root's list for them (re-sign them if you want that).
+
+### The Root's list expires too
+
+Strict clients refuse a chain whose CRL has expired. A Root that is almost never switched on must therefore publish a list with a **long validity** (the commands above use 180 days) and **renew it before it ends**, even when nothing changed. The dashboard shows the Root's list as *Expired* and warns. Publish an empty one as soon as intermediates point at the Root.
+
 ## Limits
 
 - **No OCSP yet.** CRL only.
-- **Intermediate CAs cannot be revoked yet.** That list must be signed by the Root, which stays offline; it comes with the next change.
+- A Root cannot be revoked: nothing above it could sign the statement. To retire one, remove it from the hosts that trust it.
 - A CA can publish a CRL only if its certificate has the **cRLSign** key usage. Intermediates made by pki-dash or by the documented cfssl/openssl recipes have it. If you import one without it, certificates it issues carry no CRL address (a warning says so) and revocations are recorded but cannot be published.
 - Clients cache a CRL until it expires or is replaced, so a revocation reaches them after their next refresh, not instantly.

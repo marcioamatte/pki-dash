@@ -224,7 +224,13 @@ type CA struct {
 	NotBefore time.Time
 	NotAfter  time.Time
 	CreatedAt time.Time
+	// RevokedAt is the zero time while the CA is in good standing.
+	RevokedAt        time.Time
+	RevocationReason int
 }
+
+// Revoked reports whether the CA has been revoked.
+func (c CA) Revoked() bool { return !c.RevokedAt.IsZero() }
 
 // CreateCA stores a CA and returns its ID (ca.ID if set, otherwise a new one).
 func (s *Store) CreateCA(ctx context.Context, actor string, ca CA) (string, error) {
@@ -268,15 +274,19 @@ func (s *Store) CreateCA(ctx context.Context, actor string, ca CA) (string, erro
 	return id, nil
 }
 
-const caColumns = `id, name, kind, COALESCE(parent_id, ''), cert_pem, key_blob, not_before, not_after, created_at`
+const caColumns = `id, name, kind, COALESCE(parent_id, ''), cert_pem, key_blob, not_before, not_after, created_at, revoked_at, revocation_reason`
 
 type scanner interface{ Scan(...any) error }
 
 func scanCA(r scanner) (CA, error) {
 	var c CA
 	var nb, na, cr int64
-	if err := r.Scan(&c.ID, &c.Name, &c.Kind, &c.ParentID, &c.CertPEM, &c.KeyBlob, &nb, &na, &cr); err != nil {
+	var revoked sql.NullInt64
+	if err := r.Scan(&c.ID, &c.Name, &c.Kind, &c.ParentID, &c.CertPEM, &c.KeyBlob, &nb, &na, &cr, &revoked, &c.RevocationReason); err != nil {
 		return CA{}, err
+	}
+	if revoked.Valid {
+		c.RevokedAt = time.Unix(revoked.Int64, 0).UTC()
 	}
 	c.NotBefore, c.NotAfter, c.CreatedAt = time.Unix(nb, 0).UTC(), time.Unix(na, 0).UTC(), time.Unix(cr, 0).UTC()
 	return c, nil

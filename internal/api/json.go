@@ -89,6 +89,14 @@ func mapError(w http.ResponseWriter, r *http.Request, log *slog.Logger, err erro
 		writeErr(w, http.StatusNotFound, "not_found", "not found")
 	case errors.Is(err, service.ErrAlreadyRevoked):
 		writeErr(w, http.StatusConflict, "already_revoked", "the certificate is already revoked")
+	case errors.Is(err, service.ErrCARevoked):
+		writeErr(w, http.StatusConflict, "ca_revoked", "this CA is revoked")
+	case errors.Is(err, service.ErrAlreadyImported):
+		writeErr(w, http.StatusConflict, "already_imported", "this exact CRL is already published")
+	case errors.Is(err, ca.ErrCRLNotNewer):
+		writeErr(w, http.StatusConflict, "crl_not_newer", err.Error())
+	case errors.Is(err, service.ErrNotIntermediate):
+		writeErr(w, http.StatusUnprocessableEntity, "policy_violation", "only an intermediate CA can be revoked")
 	case errors.Is(err, service.ErrNoCRL):
 		writeErr(w, http.StatusNotFound, "no_crl", "this CA has not published a CRL")
 	case errors.Is(err, store.ErrExists):
