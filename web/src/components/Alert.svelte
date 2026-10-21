@@ -11,7 +11,7 @@
 </script>
 
 <div
-  class="rounded-lg border px-4 py-3 text-sm {styles[kind]}"
+  class="rounded-sm border px-4 py-3 text-sm {styles[kind]}"
   role={kind === 'error' ? 'alert' : 'status'}
 >
   {@render children()}

@@ -29,11 +29,11 @@ go list -deps ./... \
       cat "$lic"
     done
 
-# Frontend packages whose code or banner ends up in the shipped bundle: the
-# Svelte runtime (and the two small modules it imports) and Tailwind's CSS
-# banner. Build-time-only tooling is not redistributed and is not listed.
+# Frontend packages whose code, font files or banner end up in the shipped
+# bundle: the Svelte runtime (and the two small modules it imports), Tailwind's
+# CSS banner, and the Philosopher font (SIL OFL, which must travel with it). Build-time-only tooling is not redistributed and is not listed.
 # Requires `npm ci` in web/.
-bundled_npm="svelte clsx esm-env tailwindcss"
+bundled_npm="svelte clsx esm-env tailwindcss @fontsource/philosopher"
 for pkg in $bundled_npm; do
   dir="web/node_modules/$pkg"
   if [ ! -d "$dir" ]; then

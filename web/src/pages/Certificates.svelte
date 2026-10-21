@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Alert from '../components/Alert.svelte';
+  import PageHeader from '../components/PageHeader.svelte';
   import CrlStatus from '../components/CrlStatus.svelte';
   import VaultGate from '../components/VaultGate.svelte';
   import { api, downloadURL, type CA, type Cert, type Crl } from '../lib/api';
@@ -51,19 +52,18 @@
   const canPublish = (c: Cert) => crls.find((x) => x.ca_id === c.ca_id)?.can_sign ?? true;
 </script>
 
-{#if !vaultReady}<VaultGate />{/if}
+<PageHeader title={t('certs.title')} subtitle={t('certs.subtitle')}>
+  {#snippet actions()}
+    {#if canIssue()}
+      <button class="btn-primary shrink-0" disabled={!vaultReady} onclick={() => (issuing = true)}>
+        {t('certs.issue')}
+      </button>
+    {/if}
+  {/snippet}
+</PageHeader>
 
-<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-  <div>
-    <h1 class="text-2xl font-semibold">{t('certs.title')}</h1>
-    <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('certs.subtitle')}</p>
-  </div>
-  {#if canIssue()}
-    <button class="btn-primary shrink-0" disabled={!vaultReady} onclick={() => (issuing = true)}>
-      {t('certs.issue')}
-    </button>
-  {/if}
-</div>
+<div class="page">
+{#if !vaultReady}<VaultGate />{/if}
 
 {#if crls.length > 0}
   <CrlStatus
@@ -99,22 +99,22 @@
   <div class="card text-center text-sm text-slate-600 dark:text-slate-400">{t('certs.empty')}</div>
 {:else}
   <div class="card overflow-x-auto p-0">
-    <table class="w-full text-left text-sm whitespace-nowrap">
-      <thead class="border-b border-slate-200 text-xs text-slate-500 uppercase dark:border-slate-800 dark:text-slate-400">
+    <table class="data-table table-stack">
+      <thead>
         <tr>
-          <th class="px-4 py-3 font-medium">{t('certs.col.name')}</th>
-          <th class="px-4 py-3 font-medium">{t('certs.col.issuer')}</th>
-          <th class="px-4 py-3 font-medium">{t('certs.col.profile')}</th>
-          <th class="px-4 py-3 font-medium">{t('certs.col.validity')}</th>
-          <th class="px-4 py-3 font-medium">{t('certs.col.download')}</th>
+          <th class="px-4 py-3 font-semibold">{t('certs.col.name')}</th>
+          <th class="px-4 py-3 font-semibold">{t('certs.col.issuer')}</th>
+          <th class="px-4 py-3 font-semibold">{t('certs.col.profile')}</th>
+          <th class="px-4 py-3 font-semibold">{t('certs.col.validity')}</th>
+          <th class="px-4 py-3 font-semibold">{t('certs.col.download')}</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         {#each shown as c (c.id)}
           {@const state = expiryState(c.not_after)}
           <tr class={c.revoked ? 'opacity-70' : ''}>
-            <td class="px-4 py-3">
-              <div class="font-medium {c.revoked ? 'line-through' : ''}">
+            <td class="px-4 py-3" data-label={t('certs.col.name')}>
+              <div class="font-semibold {c.revoked ? 'line-through' : ''}">
                 {c.common_name}
                 {#if c.revoked}
                   <span
@@ -125,9 +125,9 @@
               </div>
               <div class="max-w-xs truncate text-xs text-slate-500 dark:text-slate-400" title={c.sans.join(', ')}>{c.sans.join(', ')}</div>
             </td>
-            <td class="px-4 py-3">{issuerName(c.ca_id)}</td>
-            <td class="px-4 py-3">{t(`profile.${c.profile}`)}</td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3" data-label={t('certs.col.issuer')}>{issuerName(c.ca_id)}</td>
+            <td class="px-4 py-3" data-label={t('certs.col.profile')}>{t(`profile.${c.profile}`)}</td>
+            <td class="px-4 py-3" data-label={t('certs.col.validity')}>
               {formatDate(c.not_after)}
               {#if state === 'expired'}
                 <span class="badge ml-1 bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200">{t('certs.expired')}</span>
@@ -135,10 +135,10 @@
                 <span class="badge ml-1 bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">{t('certs.expiresIn', { days: daysLeft(c.not_after) })}</span>
               {/if}
             </td>
-            <td class="px-4 py-3">
-              <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.certPEM(c.id)} download>{t('certs.download.cert')}</a>
+            <td class="px-4 py-3" data-label={t('certs.col.download')}>
+              <a class="text-brand-600 hover:underline dark:text-brand-400" href={downloadURL.certPEM(c.id)} download>{t('certs.download.cert')}</a>
               <span class="text-slate-300 dark:text-slate-700"> · </span>
-              <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.certFullchain(c.id)} download>{t('certs.download.fullchain')}</a>
+              <a class="text-brand-600 hover:underline dark:text-brand-400" href={downloadURL.certFullchain(c.id)} download>{t('certs.download.fullchain')}</a>
               {#if canRevoke() && !c.revoked}
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
                 <button type="button" class="text-red-700 hover:underline dark:text-red-400" onclick={() => (revoking = c)}>{t('revoke.button')}</button>
@@ -162,3 +162,4 @@
 {#if rootCrl}
   <RootCrlWizard root={rootCrl} onChanged={load} onClose={() => (rootCrl = null)} />
 {/if}
+</div>

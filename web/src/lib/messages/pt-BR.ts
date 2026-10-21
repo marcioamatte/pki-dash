@@ -5,6 +5,7 @@ export const ptBR: Record<MessageKey, string> = {
   'app.disclaimer':
     'Apenas para ambientes internos. Não use para PKI pública nem onde o comprometimento de uma CA seria crítico.',
 
+  'common.skipToContent': 'Ir para o conteúdo',
   'common.loading': 'Carregando…',
   'common.cancel': 'Cancelar',
   'common.create': 'Criar',

@@ -6,6 +6,7 @@ export const en = {
   'app.disclaimer':
     'For internal environments only. Not for public PKI or places where a CA compromise would be critical.',
 
+  'common.skipToContent': 'Skip to content',
   'common.loading': 'Loading…',
   'common.cancel': 'Cancel',
   'common.create': 'Create',

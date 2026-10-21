@@ -8,11 +8,13 @@ import (
 
 func uiFS() fstest.MapFS {
 	return fstest.MapFS{
-		"index.html":            {Data: []byte(`<!doctype html><div id="app"></div><script type="module" src="/assets/app-abc123.js"></script>`)},
-		"favicon.svg":           {Data: []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`)},
-		"assets/app-abc123.js":  {Data: []byte(`console.log("hi")`)},
-		"assets/app-abc123.css": {Data: []byte(`body{margin:0}`)},
-		".gitkeep":              {Data: nil},
+		"index.html":               {Data: []byte(`<!doctype html><div id="app"></div><script type="module" src="/assets/app-abc123.js"></script>`)},
+		"favicon.svg":              {Data: []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`)},
+		"assets/app-abc123.js":     {Data: []byte(`console.log("hi")`)},
+		"assets/app-abc123.css":    {Data: []byte(`body{margin:0}`)},
+		"assets/font-abc123.woff2": {Data: []byte("wOF2\x00\x01\x00\x00")},
+		"assets/font-abc123.woff":  {Data: []byte("wOFF\x00\x01\x00\x00")},
+		".gitkeep":                 {Data: nil},
 	}
 }
 
@@ -50,6 +52,13 @@ func TestUIServing(t *testing.T) {
 	}
 	if fav := c.raw("GET", "/favicon.svg", nil, nil); fav.status != 200 || fav.header.Get("Content-Type") != "image/svg+xml" {
 		t.Errorf("favicon: %d %v", fav.status, fav.header)
+	}
+	// Fonts get their proper types even where the system has no MIME table.
+	for path, want := range map[string]string{"/assets/font-abc123.woff2": "font/woff2", "/assets/font-abc123.woff": "font/woff"} {
+		if f := c.raw("GET", path, nil, nil); f.status != 200 || f.header.Get("Content-Type") != want ||
+			f.header.Get("Cache-Control") != "public, max-age=31536000, immutable" {
+			t.Errorf("%s: %d %v", path, f.status, f.header)
+		}
 	}
 	// The API keeps its own, stricter policy.
 	if api := c.raw("GET", "/api/v1/status", nil, nil); !strings.Contains(api.header.Get("Content-Security-Policy"), "default-src 'none'") {

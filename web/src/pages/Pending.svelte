@@ -36,33 +36,33 @@
   {#if error}<div class="mb-3"><Alert>{error}</Alert></div>{/if}
 
   <div class="card overflow-x-auto p-0">
-    <table class="w-full text-left text-sm whitespace-nowrap">
-      <thead class="border-b border-slate-200 text-xs text-slate-500 uppercase dark:border-slate-800 dark:text-slate-400">
+    <table class="data-table table-stack">
+      <thead>
         <tr>
-          <th class="px-4 py-3 font-medium">{t('pending.col.name')}</th>
-          <th class="px-4 py-3 font-medium">{t('pending.col.root')}</th>
-          <th class="px-4 py-3 font-medium">{t('pending.col.created')}</th>
-          <th class="px-4 py-3 font-medium"></th>
+          <th class="px-4 py-3 font-semibold">{t('pending.col.name')}</th>
+          <th class="px-4 py-3 font-semibold">{t('pending.col.root')}</th>
+          <th class="px-4 py-3 font-semibold">{t('pending.col.created')}</th>
+          <th class="px-4 py-3 font-semibold"></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         {#each pending as p (p.id)}
           <tr>
-            <td class="px-4 py-3 font-medium">{p.name}</td>
-            <td class="px-4 py-3">{root(p.parent_id)?.name ?? '—'}</td>
-            <td class="px-4 py-3">{formatDate(p.created_at)}</td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 font-semibold" data-label={t('pending.col.name')}>{p.name}</td>
+            <td class="px-4 py-3" data-label={t('pending.col.root')}>{root(p.parent_id)?.name ?? '—'}</td>
+            <td class="px-4 py-3" data-label={t('pending.col.created')}>{formatDate(p.created_at)}</td>
+            <td class="px-4 py-3" data-label="">
               {#if confirming === p.id}
                 <span class="mr-2 text-slate-600 dark:text-slate-400">{t('pending.cancel.confirm')}</span>
-                <button type="button" class="font-medium text-red-700 hover:underline dark:text-red-400" onclick={() => cancel(p)}>{t('pending.cancel')}</button>
+                <button type="button" class="font-semibold text-red-700 hover:underline dark:text-red-400" onclick={() => cancel(p)}>{t('pending.cancel')}</button>
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
-                <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (confirming = '')}>{t('common.close')}</button>
+                <button type="button" class="text-brand-600 hover:underline dark:text-brand-400" onclick={() => (confirming = '')}>{t('common.close')}</button>
               {:else}
-                <a class="text-teal-700 hover:underline dark:text-teal-400" href={downloadURL.requestCSR(p.id)} download={csrFileName(p.name)}>{t('pending.csr')}</a>
+                <a class="text-brand-600 hover:underline dark:text-brand-400" href={downloadURL.requestCSR(p.id)} download={csrFileName(p.name)}>{t('pending.csr')}</a>
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
-                <button type="button" class="text-teal-700 hover:underline dark:text-teal-400" onclick={() => (guiding = p)}>{t('pending.how')}</button>
+                <button type="button" class="text-brand-600 hover:underline dark:text-brand-400" onclick={() => (guiding = p)}>{t('pending.how')}</button>
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
-                <button type="button" class="font-medium text-teal-700 hover:underline dark:text-teal-400" onclick={() => (importing = p)}>{t('pending.import')}</button>
+                <button type="button" class="font-semibold text-brand-600 hover:underline dark:text-brand-400" onclick={() => (importing = p)}>{t('pending.import')}</button>
                 <span class="text-slate-300 dark:text-slate-700"> · </span>
                 <button type="button" class="text-slate-500 hover:underline dark:text-slate-400" onclick={() => (confirming = p.id)}>{t('pending.cancel')}</button>
               {/if}

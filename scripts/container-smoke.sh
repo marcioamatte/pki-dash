@@ -43,6 +43,11 @@ J='Content-Type: application/json'
 headers=$(k -D- -o /dev/null "$BASE/")
 echo "$headers" | head -1 | grep -q 200 || fail "UI not served"
 echo "$headers" | grep -qi "content-security-policy: default-src 'self'" || fail "UI lacks its CSP"
+# The UI's font must be served with its proper type (the image has no MIME table).
+css=$(k "$BASE/" | grep -o '/assets/[^"]*\.css' | head -1)
+font=$(k "$BASE$css" | grep -o '/assets/[^)"]*\.woff2' | head -1)
+[ -n "$font" ] || fail "the stylesheet does not reference the bundled font"
+[ "$(k -o /dev/null -w '%{content_type}' "$BASE$font")" = "font/woff2" ] || fail "the font is not served as font/woff2"
 k "$BASE/api/v1/status" | grep -q '"needs_setup":true' || fail "fresh instance should need setup"
 
 TOK=$(docker logs "$NAME" 2>&1 | grep -o '"setup_token":"[^"]*"' | cut -d'"' -f4)

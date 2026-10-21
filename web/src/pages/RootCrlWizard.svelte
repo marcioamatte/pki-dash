@@ -69,23 +69,23 @@
     {#if entries.length === 0}
       <Alert kind="info">{t('rootcrl.none')}</Alert>
     {:else}
-      <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
-        <table class="w-full text-left text-sm whitespace-nowrap">
-          <thead class="border-b border-slate-200 text-xs text-slate-500 uppercase dark:border-slate-800 dark:text-slate-400">
+      <div class="overflow-x-auto rounded-sm border border-slate-200 dark:border-slate-800">
+        <table class="data-table table-stack">
+          <thead>
             <tr>
-              <th class="px-3 py-2 font-medium">{t('rootcrl.col.name')}</th>
-              <th class="px-3 py-2 font-medium">{t('rootcrl.col.serial')}</th>
-              <th class="px-3 py-2 font-medium">{t('rootcrl.col.reason')}</th>
-              <th class="px-3 py-2 font-medium">{t('rootcrl.col.date')}</th>
+              <th class="px-3 py-2 font-semibold">{t('rootcrl.col.name')}</th>
+              <th class="px-3 py-2 font-semibold">{t('rootcrl.col.serial')}</th>
+              <th class="px-3 py-2 font-semibold">{t('rootcrl.col.reason')}</th>
+              <th class="px-3 py-2 font-semibold">{t('rootcrl.col.date')}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             {#each entries as e (e.ca_id)}
               <tr>
-                <td class="px-3 py-2 font-medium">{e.ca_name}</td>
-                <td class="px-3 py-2 font-mono text-xs" title={e.serial_hex}>{e.serial_hex.slice(0, 16)}…</td>
-                <td class="px-3 py-2">{t(`reason.${e.reason}` as 'reason.superseded')}</td>
-                <td class="px-3 py-2">{formatDate(e.revoked_at)}</td>
+                <td class="px-3 py-2 font-semibold" data-label={t('rootcrl.col.name')}>{e.ca_name}</td>
+                <td class="px-3 py-2 font-mono text-xs" title={e.serial_hex} data-label={t('rootcrl.col.serial')}>{e.serial_hex.slice(0, 16)}…</td>
+                <td class="px-3 py-2" data-label={t('rootcrl.col.reason')}>{t(`reason.${e.reason}` as 'reason.superseded')}</td>
+                <td class="px-3 py-2" data-label={t('rootcrl.col.date')}>{formatDate(e.revoked_at)}</td>
               </tr>
             {/each}
           </tbody>
@@ -106,7 +106,7 @@
           type="button"
           aria-selected={tool === tl}
           class="-mb-px border-b-2 px-3 py-2 text-sm {tool === tl
-            ? 'border-teal-600 font-medium text-teal-700 dark:text-teal-400'
+            ? 'border-brand-500 font-semibold text-brand-600 dark:text-brand-400'
             : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'}"
           onclick={() => (tool = tl)}
         >
@@ -125,7 +125,7 @@
       {/each}
       <p>{t('rootcrl.run')}</p>
       <CodeBlock code={recipe.command} />
-      <p class="font-medium">{t('rootcrl.result', { file: recipe.resultFile })}</p>
+      <p class="font-semibold">{t('rootcrl.result', { file: recipe.resultFile })}</p>
       {#if tool === 'cfssl'}<p class="hint !mt-0">{t('rootcrl.prefer')}</p>{/if}
     </div>
 

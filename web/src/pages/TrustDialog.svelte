@@ -27,8 +27,8 @@
         role="tab"
         type="button"
         aria-selected={os === o}
-        class="-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm {os === o
-          ? 'border-teal-600 font-medium text-teal-700 dark:text-teal-400'
+        class="-mb-px rounded-t-sm border-b-2 px-3 py-2 text-sm {os === o
+          ? 'border-brand-500 font-semibold text-brand-600 dark:text-brand-400'
           : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'}"
         onclick={() => (os = o)}
       >

@@ -24,7 +24,7 @@
         type="button"
         aria-selected={signer === s}
         class="-mb-px border-b-2 px-3 py-2 text-sm {signer === s
-          ? 'border-teal-600 font-medium text-teal-700 dark:text-teal-400'
+          ? 'border-brand-500 font-semibold text-brand-600 dark:text-brand-400'
           : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'}"
         onclick={() => (signer = s)}
       >
@@ -51,6 +51,6 @@
     <p>{t('sign.run')}</p>
     <CodeBlock code={guide.command} />
     <p class="hint">{t('sign.rootFiles')}</p>
-    <p class="font-medium">{t('sign.result', { file: guide.resultFile })}</p>
+    <p class="font-semibold">{t('sign.result', { file: guide.resultFile })}</p>
   </div>
 </div>
