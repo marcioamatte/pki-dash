@@ -1,12 +1,14 @@
 # pki-dash
 
-A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs and service certificates), built on top of Cloudflare's [cfssl](https://github.com/cloudflare/cfssl). Ships as a single container.
+A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs and service certificates), built on top of Cloudflare's [cfssl](https://github.com/cloudflare/cfssl). Create a Root and keep it offline, sign intermediates and service certificates, revoke them and publish CRLs, with roles, an audit log and optional sign-in with Keycloak. Installs as a `.deb`/`.rpm` package with a systemd service, as a container image, or as a single binary.
 
 > Translations: [pt-BR](README_pt-BR.md)
 
-> **Status: early development. The backend, JSON API and a first web UI (setup, sign-in, vault unlock, creating and listing CAs, issuing and downloading certificates, trust instructions per OS, users and roles, the audit log, taking a Root offline, importing a Root or intermediates signed elsewhere, revoking certificates and intermediates with CRLs, including a Root list signed offline) work. Not ready for real use.**
+> **Status: pre-1.0 (v0.1.0).** Tested end to end against real cfssl, openssl, Keycloak and nginx, including on the author's own infrastructure, but not audited by anyone else. Behaviour may change between versions: read the [release notes](https://github.com/marcioamatte/pki-dash/releases) and back up before upgrading. **There is no warranty and all risk of use is yours: see the notice below.**
 
-> **Disclaimer:** pki-dash is meant for internal environments such as homelabs, labs and test machines. It is **not** intended for public PKI or for settings where a CA compromise would have critical impact. It does not replace an HSM, a formal key ceremony or a commercial CA.
+> **NO WARRANTY. USE AT YOUR OWN RISK.** pki-dash is provided "as is", without warranty of any kind, express or implied, as the [MIT license](LICENSE) states. **The user is solely responsible for every risk of using it, including misuse and use in unsuitable settings**: the author accepts no liability for any damage, loss, outage, or compromise of keys, certificates or systems that results from it.
+>
+> It is meant for internal environments such as homelabs, labs and test machines. It is **not** intended for public PKI or for settings where a CA compromise would have critical impact. It does not replace an HSM, a formal key ceremony or a commercial CA.
 
 ## Goals
 
@@ -14,7 +16,11 @@ A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs 
 - Friendly UI for issuing certificates and distributing trust to hosts.
 - Security first: CA keys encrypted at rest, mandatory authentication, multi-user roles, audit log, optional sign-in with Keycloak/OIDC.
 
-## Running it (development)
+## Getting started
+
+Install a release (recommended): a `.deb`/`.rpm` package with a systemd service, a container image, or a bare binary for Linux, macOS and Windows. See [Installing](docs/06-installation.md); Docker details (a single container, unprivileged, read-only filesystem) are in [Deployment](docs/02-deployment.md).
+
+Or build from source:
 
 ```bash
 make build                           # builds the web UI (needs Node 20.19+ or 22.12+), then the Go binary into bin/
@@ -22,8 +28,6 @@ make build                           # builds the web UI (needs Node 20.19+ or 2
 ```
 
 Then open <https://localhost:8443>.
-
-Or install a release: a `.deb`/`.rpm` package with a systemd service, a container image, or a bare binary for Linux, macOS and Windows: see [Installing](docs/06-installation.md). Docker details (a single container, unprivileged, read-only filesystem) are in [Deployment](docs/02-deployment.md).
 
 The server refuses to start unless you choose how it is served. On first run it prints a one-time **setup token** to its log; enter it in the web UI (or send it to `POST /api/v1/setup`) to create the first admin and the master passphrase. After every restart the vault is locked: unlock it from the UI (or `POST /api/v1/vault/unlock`), so CA keys never sit decrypted on disk.
 
