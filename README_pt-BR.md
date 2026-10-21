@@ -12,7 +12,7 @@ Um painel web para criar e gerenciar uma PKI interna (Root CA, CAs intermediári
 
 - Hierarquia Root → intermediária → certificado de serviço, com a Root mantida offline.
 - UI amigável para emitir certificados e distribuir a confiança aos hosts.
-- Security first: chaves das CAs cifradas em repouso, autenticação obrigatória, papéis multiusuário, auditoria e OIDC depois.
+- Security first: chaves das CAs cifradas em repouso, autenticação obrigatória, papéis multiusuário, auditoria e login opcional com Keycloak/OIDC.
 
 ## Executando (desenvolvimento)
 
@@ -34,6 +34,7 @@ O servidor se recusa a iniciar sem que você escolha como ele será servido. Na 
 - [Implantação (Docker)](docs/02-deployment_pt-BR.md)
 - [Mantendo a Root offline](docs/03-offline-root_pt-BR.md)
 - [Revogação e CRLs](docs/04-revocation_pt-BR.md)
+- [Entrando com Keycloak (OIDC)](docs/05-sso-keycloak_pt-BR.md)
 
 ## Licença
 

@@ -36,6 +36,8 @@ Terminar o TLS em um proxy reverso na frente do pki-dash **ainda não é suporta
 
 Variáveis de ambiente (as flags prevalecem): `PKI_DASH_DATA_DIR` (padrão `/data` na imagem), `PKI_DASH_LISTEN` (padrão `0.0.0.0:8443` na imagem), `PKI_DASH_TLS_CERT`, `PKI_DASH_TLS_KEY`.
 
+Para deixar as pessoas entrarem pelo Keycloak ou outro provedor OpenID Connect, veja [Entrando com Keycloak](05-sso-keycloak_pt-BR.md). Ele traz opções próprias (`-external-url`, `-oidc-*`).
+
 ## A senha mestra e os reinícios
 
 As chaves privadas das CAs são criptografadas com a senha mestra e **nunca** são decifradas em disco. Após cada início o cofre fica bloqueado: entre como administrador e desbloqueie pela interface (ou `POST /api/v1/vault/unlock`) antes de emitir certificados. Não há recuperação se a senha for perdida.

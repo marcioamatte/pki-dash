@@ -36,6 +36,8 @@ var (
 	ErrInvalidUsername    = errors.New("auth: invalid username")
 	ErrInvalidRole        = errors.New("auth: invalid role")
 	ErrSetupDone          = errors.New("auth: setup already completed")
+	ErrNoAccess           = errors.New("auth: the identity provider granted no access to this application")
+	ErrExternalUser       = errors.New("auth: this user is managed by the identity provider")
 )
 
 const (
@@ -54,6 +56,7 @@ type Options struct {
 	IdleTimeout    time.Duration    // 30 minutes
 	SessionTTL     time.Duration    // 12 hours, absolute
 	MaxConcurrency int              // 4 simultaneous password hashes
+	ExternalRoles  RoleMap          // how identity-provider groups become roles; empty means no external sign-in
 }
 
 // Session is an authenticated principal. Token is set only on the Session
@@ -231,6 +234,9 @@ func (a *Auth) SetRole(ctx context.Context, p *Session, userID, role string) err
 	if !validRole(role) {
 		return ErrInvalidRole
 	}
+	if u, err := a.st.GetUser(ctx, userID); err == nil && u.AuthSource != store.SourceLocal {
+		return ErrExternalUser
+	}
 	return a.st.SetRole(ctx, p.Username, userID, role)
 }
 
@@ -250,6 +256,9 @@ func (a *Auth) ResetPassword(ctx context.Context, p *Session, userID, newPasswor
 	u, err := a.st.GetUser(ctx, userID)
 	if err != nil {
 		return err
+	}
+	if u.AuthSource != store.SourceLocal {
+		return ErrExternalUser
 	}
 	if err := checkPassword(newPassword, u.Username); err != nil {
 		return err
@@ -352,6 +361,13 @@ func (a *Auth) Login(ctx context.Context, username, password string) (*Session, 
 			_ = a.st.SetPasswordHash(ctx, u.Username, u.ID, h, false)
 		}
 	}
+	return a.openSession(ctx, u, u.Role, "", "")
+}
+
+// openSession records a successful login and creates the session. detail goes
+// into the audit entry (for example how the user signed in).
+func (a *Auth) openSession(ctx context.Context, u store.User, role, detail, idpHint string) (*Session, error) {
+	now := a.opts.Now()
 	if err := a.st.RecordLoginSuccess(ctx, u.ID); err != nil {
 		return nil, err
 	}
@@ -364,14 +380,14 @@ func (a *Auth) Login(ctx context.Context, username, password string) (*Session, 
 		return nil, err
 	}
 	exp := now.Add(a.opts.SessionTTL)
-	if err := a.st.CreateSession(ctx, hashToken(tok), u.ID, csrf, exp); err != nil {
+	if err := a.st.CreateSession(ctx, hashToken(tok), u.ID, csrf, idpHint, exp); err != nil {
 		return nil, err
 	}
-	if err := a.st.AuditEvent(ctx, u.Username, "user.login", u.ID, ""); err != nil {
+	if err := a.st.AuditEvent(ctx, u.Username, "user.login", u.ID, detail); err != nil {
 		_ = a.st.DeleteSession(ctx, hashToken(tok)) // no unaudited session
 		return nil, err
 	}
-	return &Session{Token: tok, UserID: u.ID, Username: u.Username, Role: u.Role, CSRF: csrf, ExpiresAt: exp}, nil
+	return &Session{Token: tok, UserID: u.ID, Username: u.Username, Role: role, CSRF: csrf, ExpiresAt: exp}, nil
 }
 
 // Validate resolves a session token. It enforces both timeouts and the
@@ -399,13 +415,16 @@ func (a *Auth) Validate(ctx context.Context, tok string) (*Session, error) {
 	return &Session{UserID: s.User.ID, Username: s.User.Username, Role: s.User.Role, CSRF: s.CSRF, ExpiresAt: s.ExpiresAt}, nil
 }
 
-// Logout ends a session. An unknown token is not an error.
-func (a *Auth) Logout(ctx context.Context, tok string) error {
+// Logout ends a session. An unknown token is not an error. For an SSO session
+// it returns the ID token that identifies it at the provider, so the caller can
+// end that session too; it is empty otherwise.
+func (a *Auth) Logout(ctx context.Context, tok string) (idpHint string, err error) {
 	h := hashToken(tok)
-	if s, err := a.st.GetSession(ctx, h); err == nil {
+	if s, gerr := a.st.GetSession(ctx, h); gerr == nil {
 		_ = a.st.AuditEvent(ctx, s.User.Username, "user.logout", s.User.ID, "")
+		idpHint = s.IDPHint
 	}
-	return a.st.DeleteSession(ctx, h)
+	return idpHint, a.st.DeleteSession(ctx, h)
 }
 
 // PurgeExpired deletes expired and idle sessions. Run it periodically.

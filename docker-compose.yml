@@ -11,6 +11,11 @@ services:
   pki-dash:
     build: .                 # no published image yet: this builds it from this checkout
     image: pki-dash:local
+    # To sign in with Keycloak/OIDC (docs/05-sso-keycloak.md), add to the command, for example:
+    #   "-external-url=https://pki.lab:8443", "-oidc-issuer=https://keycloak.lab/realms/lab",
+    #   "-oidc-client-id=pki-dash", "-oidc-client-secret-file=/run/oidc/secret",
+    #   "-oidc-admin-groups=pki-admins", "-oidc-viewer-groups=pki-viewers"
+    # and mount the secret (and, for a private CA, "-oidc-ca-file=/run/oidc/ca.pem") read-only under /run/oidc.
     command: ["-tls-cert=/certs/tls.crt", "-tls-key=/certs/tls.key"]
     ports:
       # Bind to one interface rather than every one. Use 0.0.0.0 only on purpose.
@@ -21,6 +26,7 @@ services:
     volumes:
       - pki-data:/data
       - ./certs:/certs:ro
+      # - ./oidc:/run/oidc:ro   # the OIDC client secret, readable by uid 65532
     restart: unless-stopped
 
     # Hardening: the process needs to write only to /data.

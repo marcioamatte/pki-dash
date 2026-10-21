@@ -19,14 +19,17 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/marcioamatte/pki-dash/internal/api"
 	"github.com/marcioamatte/pki-dash/internal/auth"
+	"github.com/marcioamatte/pki-dash/internal/oidc"
 	"github.com/marcioamatte/pki-dash/internal/service"
 	"github.com/marcioamatte/pki-dash/internal/store"
 	"github.com/marcioamatte/pki-dash/web"
@@ -63,6 +66,8 @@ func run(ctx context.Context, args []string) error {
 	selfSigned := fs.Bool("tls-self-signed", false, "serve TLS with a throwaway self-signed certificate (labs only)")
 	pkiListen := fs.String("pki-listen", env("PKI_DASH_PKI_LISTEN", ""), "address of the public, read-only listener that serves CRLs and CA certificates over plain HTTP, e.g. 0.0.0.0:8080 (env PKI_DASH_PKI_LISTEN)")
 	publicURL := fs.String("public-url", env("PKI_DASH_PUBLIC_URL", ""), "how clients reach that listener, e.g. http://pki.lab:8080; written into issued certificates (env PKI_DASH_PUBLIC_URL)")
+	var o oidcFlags
+	o.register(fs)
 	showVersion := fs.Bool("version", false, "print the version and exit")
 	insecure := fs.Bool("insecure-http", false, "serve plain HTTP: development, or behind a TLS-terminating proxy you trust")
 	if err := fs.Parse(args); err != nil {
@@ -107,10 +112,22 @@ func run(ctx context.Context, args []string) error {
 	}
 	defer st.Close()
 
-	svc := service.New(st, service.Options{PublicURL: base})
-	au, err := auth.New(st, auth.Options{})
+	oidcProv, roles, err := o.build()
 	if err != nil {
 		return err
+	}
+	svc := service.New(st, service.Options{PublicURL: base})
+	au, err := auth.New(st, auth.Options{ExternalRoles: roles})
+	if err != nil {
+		return err
+	}
+	if oidcProv != nil {
+		// Only a log line: the provider is contacted again, and retried, at the first sign-in.
+		if err := oidcProv.Check(ctx); err != nil {
+			log.Warn("OIDC provider not reachable yet; it will be retried at sign-in", "err", err)
+		} else {
+			log.Info("OIDC sign-in enabled", "issuer", o.issuer)
+		}
 	}
 
 	var setupToken string
@@ -130,6 +147,7 @@ func run(ctx context.Context, args []string) error {
 	srv := api.New(api.Options{
 		Service: svc, Auth: au, Logger: log,
 		SecureCookies: !*insecure, SetupToken: setupToken, UI: web.Dist(),
+		OIDC: oidcProv, OIDCName: o.name,
 	})
 	httpSrv := &http.Server{
 		Addr:              *listen,
@@ -227,6 +245,102 @@ func run(ctx context.Context, args []string) error {
 		_ = pubSrv.Shutdown(shutdown)
 	}
 	return httpSrv.Shutdown(shutdown)
+}
+
+// oidcFlags are the settings for signing in through an identity provider.
+// They are all optional; with none set, only local accounts exist.
+type oidcFlags struct {
+	issuer, clientID, secretFile, externalURL, name string
+	caFile, groupsClaim, usernameClaim, defaultRole string
+	adminGroups, operatorGroups, viewerGroups       string
+}
+
+func (o *oidcFlags) register(fs *flag.FlagSet) {
+	fs.StringVar(&o.issuer, "oidc-issuer", env("PKI_DASH_OIDC_ISSUER", ""), "OpenID Connect issuer URL, e.g. https://keycloak.lab/realms/lab; enables SSO (env PKI_DASH_OIDC_ISSUER)")
+	fs.StringVar(&o.clientID, "oidc-client-id", env("PKI_DASH_OIDC_CLIENT_ID", ""), "client id registered at the provider (env PKI_DASH_OIDC_CLIENT_ID)")
+	fs.StringVar(&o.secretFile, "oidc-client-secret-file", env("PKI_DASH_OIDC_CLIENT_SECRET_FILE", ""), "file holding the client secret; or set env PKI_DASH_OIDC_CLIENT_SECRET; none = public client (env PKI_DASH_OIDC_CLIENT_SECRET_FILE)")
+	fs.StringVar(&o.externalURL, "external-url", env("PKI_DASH_EXTERNAL_URL", ""), "address of this dashboard as browsers reach it, e.g. https://pki.lab:8443; the SSO redirect is built from it (env PKI_DASH_EXTERNAL_URL)")
+	fs.StringVar(&o.name, "oidc-name", env("PKI_DASH_OIDC_NAME", "SSO"), "label of the sign-in button (env PKI_DASH_OIDC_NAME)")
+	fs.StringVar(&o.caFile, "oidc-ca-file", env("PKI_DASH_OIDC_CA_FILE", ""), "PEM file with the CA that signed the provider's TLS certificate, if it is a private one (env PKI_DASH_OIDC_CA_FILE)")
+	fs.StringVar(&o.groupsClaim, "oidc-groups-claim", env("PKI_DASH_OIDC_GROUPS_CLAIM", "groups"), "ID-token claim with the user's groups; a dotted path reaches inside objects, e.g. realm_access.roles (env PKI_DASH_OIDC_GROUPS_CLAIM)")
+	fs.StringVar(&o.usernameClaim, "oidc-username-claim", env("PKI_DASH_OIDC_USERNAME_CLAIM", "preferred_username"), "ID-token claim used as the account name (env PKI_DASH_OIDC_USERNAME_CLAIM)")
+	fs.StringVar(&o.adminGroups, "oidc-admin-groups", env("PKI_DASH_OIDC_ADMIN_GROUPS", ""), "comma-separated groups that become admin (env PKI_DASH_OIDC_ADMIN_GROUPS)")
+	fs.StringVar(&o.operatorGroups, "oidc-operator-groups", env("PKI_DASH_OIDC_OPERATOR_GROUPS", ""), "comma-separated groups that become operator (env PKI_DASH_OIDC_OPERATOR_GROUPS)")
+	fs.StringVar(&o.viewerGroups, "oidc-viewer-groups", env("PKI_DASH_OIDC_VIEWER_GROUPS", ""), "comma-separated groups that become viewer (env PKI_DASH_OIDC_VIEWER_GROUPS)")
+	fs.StringVar(&o.defaultRole, "oidc-default-role", env("PKI_DASH_OIDC_DEFAULT_ROLE", ""), "role for people in none of those groups: viewer or operator; empty = they cannot sign in (env PKI_DASH_OIDC_DEFAULT_ROLE)")
+}
+
+func splitList(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// build returns a nil provider when SSO is not configured. A half-configured
+// SSO is an error: better to refuse to start than to run without the sign-in
+// the operator thinks they have.
+func (o *oidcFlags) build() (*oidc.Provider, auth.RoleMap, error) {
+	secret := os.Getenv("PKI_DASH_OIDC_CLIENT_SECRET")
+	roles := auth.RoleMap{
+		Admin: splitList(o.adminGroups), Operator: splitList(o.operatorGroups), Viewer: splitList(o.viewerGroups),
+		Default: strings.ToLower(strings.TrimSpace(o.defaultRole)),
+	}
+	if o.issuer == "" {
+		if o.clientID != "" || o.secretFile != "" || o.externalURL != "" || roles.Enabled() {
+			return nil, auth.RoleMap{}, errors.New("OIDC settings were given but -oidc-issuer is missing")
+		}
+		return nil, auth.RoleMap{}, nil
+	}
+	if o.clientID == "" || o.externalURL == "" {
+		return nil, auth.RoleMap{}, errors.New("SSO needs -oidc-client-id and -external-url together with -oidc-issuer")
+	}
+	if err := roles.Validate(); err != nil {
+		return nil, auth.RoleMap{}, fmt.Errorf("-oidc-default-role: %w", err)
+	}
+	if !roles.Enabled() {
+		return nil, auth.RoleMap{}, errors.New("SSO needs at least one of -oidc-admin-groups, -oidc-operator-groups, -oidc-viewer-groups or -oidc-default-role: otherwise nobody could sign in")
+	}
+	if o.secretFile != "" {
+		b, err := os.ReadFile(o.secretFile)
+		if err != nil {
+			return nil, auth.RoleMap{}, fmt.Errorf("read client secret: %w", err)
+		}
+		secret = strings.TrimSpace(string(b))
+	}
+	ext, err := url.Parse(o.externalURL)
+	if err != nil || ext.Host == "" || ext.Path != "" && ext.Path != "/" || ext.RawQuery != "" {
+		return nil, auth.RoleMap{}, fmt.Errorf("-external-url %q must be just a scheme and host, like https://pki.lab:8443", o.externalURL)
+	}
+	client := &http.Client{Timeout: 15 * time.Second}
+	if o.caFile != "" {
+		pemBytes, err := os.ReadFile(o.caFile)
+		if err != nil {
+			return nil, auth.RoleMap{}, fmt.Errorf("read -oidc-ca-file: %w", err)
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(pemBytes) {
+			return nil, auth.RoleMap{}, errors.New("-oidc-ca-file holds no certificate")
+		}
+		client.Transport = &http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: pool}}
+	}
+	name := strings.TrimSpace(o.name)
+	if name == "" || len(name) > 40 {
+		name = "SSO"
+		o.name = name
+	}
+	p, err := oidc.New(oidc.Config{
+		Issuer: o.issuer, ClientID: o.clientID, ClientSecret: secret,
+		RedirectURL: strings.TrimRight(o.externalURL, "/") + "/api/v1/auth/oidc/callback",
+		GroupsClaim: o.groupsClaim, UsernameClaim: o.usernameClaim, HTTPClient: client,
+	})
+	if err != nil {
+		return nil, auth.RoleMap{}, err
+	}
+	return p, roles, nil
 }
 
 // selfSignedCert makes an in-memory certificate for localhost and this host.

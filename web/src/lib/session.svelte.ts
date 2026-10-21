@@ -9,6 +9,8 @@ interface State {
   vault: { initialized: boolean; unlocked: boolean };
   /** Where clients reach the public listener (CRLs, CA certificates); empty when not configured. */
   publicUrl: string;
+  /** The identity provider's button label, or empty when only local sign-in exists. */
+  ssoName: string;
 }
 
 export const session: State = $state({
@@ -17,6 +19,7 @@ export const session: State = $state({
   role: null,
   vault: { initialized: false, unlocked: false },
   publicUrl: '',
+  ssoName: '',
 });
 
 function applyVault(s: Status) {
@@ -35,6 +38,7 @@ export async function refresh(): Promise<void> {
   try {
     const st = await api.status();
     applyVault(st);
+    session.ssoName = st.oidc?.name ?? '';
     if (st.needs_setup) {
       signedOut();
       session.phase = 'setup';
@@ -73,12 +77,16 @@ function loadConfig() {
 }
 
 export async function signOut(): Promise<void> {
+  let next: string | undefined;
   try {
-    await api.logout();
+    next = (await api.logout())?.logout_url;
   } finally {
     signedOut();
     session.phase = 'login';
   }
+  // For an SSO session, go through the provider's logout so its own session ends
+  // too; otherwise "Sign in" would walk straight back in. It returns here after.
+  if (next && /^https?:\/\//.test(next)) location.assign(next);
 }
 
 export async function reloadVault(): Promise<void> {

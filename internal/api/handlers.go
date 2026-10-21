@@ -30,6 +30,8 @@ func (s *Server) routes(mux *http.ServeMux) {
 	s.handle(mux, "GET "+v1+"/status", pub, s.status)
 	s.handle(mux, "POST "+v1+"/setup", pubStrict, s.setup)
 	s.handle(mux, "POST "+v1+"/login", pubStrict, s.login)
+	s.handle(mux, "GET "+v1+"/auth/oidc/login", pubStrict, s.oidcLogin)
+	s.handle(mux, "GET "+v1+"/auth/oidc/callback", pubStrict, s.oidcCallback)
 	s.handle(mux, "POST "+v1+"/logout", any, s.logout)
 	s.handle(mux, "GET "+v1+"/me", any, s.me)
 	s.handle(mux, "POST "+v1+"/me/password", route{strict: true}, s.changeOwnPassword)
@@ -111,9 +113,13 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request, _ *auth.Session)
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{
+	out := map[string]any{
 		"needs_setup": needs, "vault_initialized": st.Initialized, "vault_unlocked": st.Unlocked,
-	})
+	}
+	if s.oidc != nil {
+		out["oidc"] = map[string]string{"name": s.oidcName}
+	}
+	writeJSON(w, http.StatusOK, out)
 	return nil
 }
 
@@ -183,12 +189,22 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request, _ *auth.Session) 
 }
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request, _ *auth.Session) error {
+	var hint string
 	if c, err := r.Cookie(s.cookieName()); err == nil {
-		if err := s.auth.Logout(r.Context(), c.Value); err != nil {
-			return err
+		var lerr error
+		if hint, lerr = s.auth.Logout(r.Context(), c.Value); lerr != nil {
+			return lerr
 		}
 	}
 	s.clearCookie(w)
+	// A person who signed in through the provider is also signed out there, or
+	// the next "Sign in" would walk straight back in. The UI follows this address.
+	if s.oidc != nil {
+		if u := s.oidc.LogoutURL(hint, s.oidc.HomeURL()); u != "" {
+			writeJSON(w, http.StatusOK, map[string]string{"logout_url": u})
+			return nil
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

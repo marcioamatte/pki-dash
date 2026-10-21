@@ -12,7 +12,7 @@ A web dashboard to create and manage an internal PKI (Root CA, intermediate CAs 
 
 - Root → intermediate → service certificate hierarchy, with the Root kept offline.
 - Friendly UI for issuing certificates and distributing trust to hosts.
-- Security first: CA keys encrypted at rest, mandatory authentication, multi-user roles, audit log, OIDC later.
+- Security first: CA keys encrypted at rest, mandatory authentication, multi-user roles, audit log, optional sign-in with Keycloak/OIDC.
 
 ## Running it (development)
 
@@ -34,6 +34,7 @@ The server refuses to start unless you choose how it is served. On first run it 
 - [Deployment (Docker)](docs/02-deployment.md)
 - [Keeping the Root offline](docs/03-offline-root.md)
 - [Revocation and CRLs](docs/04-revocation.md)
+- [Signing in with Keycloak (OIDC)](docs/05-sso-keycloak.md)
 
 ## License
 
