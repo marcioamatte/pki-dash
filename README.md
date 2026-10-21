@@ -41,6 +41,10 @@ The server refuses to start unless you choose how it is served. On first run it 
 - [Signing in with Keycloak (OIDC)](docs/05-sso-keycloak.md)
 - [Installing: packages, image, binaries](docs/06-installation.md)
 
+## Contributing
+
+Bug reports, ideas, documentation and code are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md). For security problems, see [SECURITY.md](SECURITY.md).
+
 ## License
 
 [MIT](LICENSE). Bundled third-party software is listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), including cfssl (BSD-2-Clause).
