@@ -36,6 +36,8 @@ Terminating TLS in a reverse proxy in front of pki-dash is **not supported yet**
 
 Environment variables (flags win): `PKI_DASH_DATA_DIR` (default `/data` in the image), `PKI_DASH_LISTEN` (default `0.0.0.0:8443` in the image), `PKI_DASH_TLS_CERT`, `PKI_DASH_TLS_KEY`.
 
+To let people sign in through Keycloak or another OpenID Connect provider, see [Signing in with Keycloak](05-sso-keycloak.md). It adds options of its own (`-external-url`, `-oidc-*`).
+
 ## The master passphrase and restarts
 
 CA private keys are encrypted with the master passphrase and are **never** decrypted on disk. After every start, the vault is locked: sign in as an administrator and unlock it from the UI (or `POST /api/v1/vault/unlock`) before issuing certificates. There is no recovery if the passphrase is lost.

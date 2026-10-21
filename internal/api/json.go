@@ -72,6 +72,8 @@ func mapError(w http.ResponseWriter, r *http.Request, log *slog.Logger, err erro
 		writeErr(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 	case errors.Is(err, auth.ErrInvalidSession):
 		writeErr(w, http.StatusUnauthorized, "unauthenticated", "authentication required")
+	case errors.Is(err, auth.ErrExternalUser):
+		writeErr(w, http.StatusConflict, "external_user", "this user is managed by the identity provider")
 	case errors.Is(err, auth.ErrForbidden):
 		writeErr(w, http.StatusForbidden, "forbidden", "you are not allowed to do this")
 	case errors.Is(err, vault.ErrBadPassphrase):

@@ -112,8 +112,8 @@ func (s *Store) CreateUser(ctx context.Context, actor string, u User, onlyIfEmpt
 	return id, nil
 }
 
-func (s *Store) getUser(ctx context.Context, where string, arg any) (User, error) {
-	u, err := scanUser(s.db.QueryRowContext(ctx, `SELECT `+userColumns+` FROM users WHERE `+where, arg))
+func (s *Store) getUser(ctx context.Context, where string, args ...any) (User, error) {
+	u, err := scanUser(s.db.QueryRowContext(ctx, `SELECT `+userColumns+` FROM users WHERE `+where, args...))
 	if errors.Is(err, sql.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -128,6 +128,11 @@ func (s *Store) GetUser(ctx context.Context, id string) (User, error) {
 // GetUserByUsername looks a user up case-insensitively.
 func (s *Store) GetUserByUsername(ctx context.Context, username string) (User, error) {
 	return s.getUser(ctx, `username = ?`, username)
+}
+
+// GetUserByExternal returns the user for an identity-provider subject, or ErrNotFound.
+func (s *Store) GetUserByExternal(ctx context.Context, source, externalID string) (User, error) {
+	return s.getUser(ctx, `auth_source = ? AND external_id = ?`, source, externalID)
 }
 
 // ListUsers returns all users ordered by username.

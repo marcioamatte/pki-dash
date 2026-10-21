@@ -72,6 +72,8 @@ export interface Status {
   needs_setup: boolean;
   vault_initialized: boolean;
   vault_unlocked: boolean;
+  /** Present when sign-in through an identity provider is configured. */
+  oidc?: { name: string };
 }
 export interface SessionInfo {
   username: string;

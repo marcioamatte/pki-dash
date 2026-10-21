@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/marcioamatte/pki-dash/internal/auth"
+	"github.com/marcioamatte/pki-dash/internal/oidc"
 	"github.com/marcioamatte/pki-dash/internal/service"
 )
 
@@ -34,6 +35,10 @@ type Options struct {
 	// SetupToken, when set, must accompany the first-run setup request. It
 	// stops whoever reaches a fresh instance first from claiming it.
 	SetupToken string
+	// OIDC, when set, adds "sign in with the identity provider". OIDCName is the
+	// label the login button shows.
+	OIDC     *oidc.Provider
+	OIDCName string
 	// UI is the built frontend, served at / and /assets/. Nil serves the API only.
 	UI fs.FS
 	// Now overrides the clock, for tests.
@@ -48,6 +53,8 @@ type Server struct {
 	secure     bool
 	setupToken string
 	ui         fs.FS
+	oidc       *oidc.Provider
+	oidcName   string
 	general    *limiter
 	public     *limiter
 	strict     *limiter // login, passphrase and other credential-guessing targets
@@ -62,7 +69,7 @@ func New(o Options) *Server {
 		o.Now = time.Now
 	}
 	return &Server{
-		svc: o.Service, auth: o.Auth, log: o.Logger, secure: o.SecureCookies, setupToken: o.SetupToken, ui: o.UI,
+		svc: o.Service, auth: o.Auth, log: o.Logger, secure: o.SecureCookies, setupToken: o.SetupToken, ui: o.UI, oidc: o.OIDC, oidcName: o.OIDCName,
 		general: newLimiter(30, 120, o.Now),   // 30 req/s sustained, bursts of 120
 		public:  newLimiter(20, 100, o.Now),   // the public listener, per address
 		strict:  newLimiter(1.0/6, 10, o.Now), // 10 per minute sustained, bursts of 10

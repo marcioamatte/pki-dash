@@ -33,7 +33,7 @@ Security first é um princípio do projeto: quando uma escolha troca segurança 
 - **Autenticação obrigatória desde o dia 1.** Login local, admin criado no primeiro acesso.
 - **Multiusuário com papéis** (ex.: admin, operador que emite certificados, leitor). Papéis exatos a definir.
 - **Log de auditoria** de ações sensíveis (criação de CA, emissão, exportação de chave, login).
-- **OIDC** (alvo inicial: Keycloak) como método de login adicional. Fora do MVP mínimo, mas a camada de autenticação deve nascer preparada para ele.
+- **OIDC** (alvo inicial: Keycloak) como método de login adicional: implementado, veja [Entrando com Keycloak](05-sso-keycloak_pt-BR.md).
 
 ## 5. Modelo de ameaça (esboço)
 

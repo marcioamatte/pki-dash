@@ -30,6 +30,8 @@ func (s *Server) routes(mux *http.ServeMux) {
 	s.handle(mux, "GET "+v1+"/status", pub, s.status)
 	s.handle(mux, "POST "+v1+"/setup", pubStrict, s.setup)
 	s.handle(mux, "POST "+v1+"/login", pubStrict, s.login)
+	s.handle(mux, "GET "+v1+"/auth/oidc/login", pubStrict, s.oidcLogin)
+	s.handle(mux, "GET "+v1+"/auth/oidc/callback", pubStrict, s.oidcCallback)
 	s.handle(mux, "POST "+v1+"/logout", any, s.logout)
 	s.handle(mux, "GET "+v1+"/me", any, s.me)
 	s.handle(mux, "POST "+v1+"/me/password", route{strict: true}, s.changeOwnPassword)
@@ -111,9 +113,13 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request, _ *auth.Session)
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{
+	out := map[string]any{
 		"needs_setup": needs, "vault_initialized": st.Initialized, "vault_unlocked": st.Unlocked,
-	})
+	}
+	if s.oidc != nil {
+		out["oidc"] = map[string]string{"name": s.oidcName}
+	}
+	writeJSON(w, http.StatusOK, out)
 	return nil
 }
 

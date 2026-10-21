@@ -47,13 +47,20 @@ type env struct {
 
 func newEnv(t *testing.T, secure bool, mods ...func(*Options)) *env {
 	t.Helper()
+	return newEnvAuth(t, secure, auth.Options{}, mods...)
+}
+
+// newEnvAuth is newEnv with extra auth settings (for example external roles).
+func newEnvAuth(t *testing.T, secure bool, ao auth.Options, mods ...func(*Options)) *env {
+	t.Helper()
 	st, err := store.Open(filepath.Join(t.TempDir(), "pki.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { st.Close() })
 	svc := service.New(st, service.Options{KDF: vault.Params{Time: 2, Memory: 19 * 1024, Threads: 1}, PublicURL: "http://pki.test:8080"})
-	au, err := auth.New(st, auth.Options{Password: auth.PasswordParams{Time: 2, Memory: 19 * 1024, Threads: 1}})
+	ao.Password = auth.PasswordParams{Time: 2, Memory: 19 * 1024, Threads: 1}
+	au, err := auth.New(st, ao)
 	if err != nil {
 		t.Fatal(err)
 	}

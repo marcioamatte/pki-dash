@@ -76,8 +76,8 @@
                 id="role-{u.id}"
                 class="rounded-sm border border-slate-300 bg-white px-2 py-1 text-sm disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900"
                 value={u.role}
-                disabled={me}
-                title={me ? t('users.selfHint') : undefined}
+                disabled={me || u.auth_source !== 'local'}
+                title={me ? t('users.selfHint') : u.auth_source !== 'local' ? t('users.ssoRoleHint') : undefined}
                 onchange={(e) => change(() => api.patchUser(u.id, { role: e.currentTarget.value as Role }))}
               >
                 {#each roles as r (r)}<option value={r}>{t(`role.${r}`)}</option>{/each}

@@ -33,7 +33,7 @@ Security first is a project principle: when a choice trades security against con
 - **Mandatory authentication from day 1.** Local login, admin created on first access.
 - **Multi-user with roles** (e.g. admin, operator who issues certificates, viewer). Exact roles TBD.
 - **Audit log** of sensitive actions (CA creation, issuance, key export, login).
-- **OIDC** (initial target: Keycloak) as an additional login method. Not in the minimal MVP, but the authentication layer must be designed for it from the start.
+- **OIDC** (initial target: Keycloak) as an additional login method: implemented, see [Signing in with Keycloak](05-sso-keycloak.md).
 
 ## 5. Threat model (sketch)
 
