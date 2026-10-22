@@ -73,5 +73,5 @@ The API is the contract. The UI is just one client of it, which also makes futur
 
 1. Frontend: Svelte.
 2. Key algorithms: ECDSA P-384 (Root), P-256 (intermediates and leaves), RSA 3072/4096 optional, Ed25519 off by default.
-3. Default validities: Root 10 years, intermediates 3–5 years, leaves ≤ 1 year, with a UI warning above 398 days.
+3. Default validities: Root 10 years, intermediates 2 years (originally 3–5; shortened so a leaked intermediate stops being useful sooner, see [Protecting your PKI](07-security-guidance.md)), leaves ≤ 1 year, with a UI warning above 398 days.
 4. Repository: `git@github.com:marcioamatte/pki-dash.git`; Go module path `github.com/marcioamatte/pki-dash`.

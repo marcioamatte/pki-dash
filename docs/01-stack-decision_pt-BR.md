@@ -73,5 +73,5 @@ A API é o contrato. A UI é apenas um cliente dela, o que também abre espaço 
 
 1. Frontend: Svelte.
 2. Algoritmos de chave: ECDSA P-384 (Root), P-256 (intermediárias e folhas), RSA 3072/4096 opcional, Ed25519 desligado por padrão.
-3. Validades padrão: Root 10 anos, intermediárias 3–5 anos, folhas ≤ 1 ano, com aviso na UI acima de 398 dias.
+3. Validades padrão: Root 10 anos, intermediárias 2 anos (originalmente 3–5; encurtado para que uma intermediária vazada deixe de ser útil mais cedo, veja [Protegendo a sua PKI](07-security-guidance_pt-BR.md)), folhas ≤ 1 ano, com aviso na UI acima de 398 dias.
 4. Repositório: `git@github.com:marcioamatte/pki-dash.git`; module path Go `github.com/marcioamatte/pki-dash`.

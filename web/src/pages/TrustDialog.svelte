@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Alert from '../components/Alert.svelte';
   import CodeBlock from '../components/CodeBlock.svelte';
   import Dialog from '../components/Dialog.svelte';
   import { downloadURL, type CA } from '../lib/api';
@@ -43,6 +44,9 @@
       <CodeBlock code={commands} />
       {#if os === 'macos'}<p class="hint">{t('trust.note.macos')}</p>{/if}
       {#if os === 'windows'}<p class="hint">{t('trust.note.windows')}</p>{/if}
+      {#if os === 'alpine' || os === 'java' || os === 'node' || os === 'python' || os === 'containers'}
+        <p class="hint">{t(`trust.note.${os}`)}</p>
+      {/if}
     {:else}
       <p>{t('trust.firefox.intro')}</p>
       <ol class="list-decimal space-y-1 pl-5">
@@ -53,6 +57,8 @@
       <p class="hint">{t('trust.firefox.alt')}</p>
     {/if}
   </div>
+
+  <Alert kind="info">{t('trust.stores')}</Alert>
 
   <div class="flex justify-end">
     <button type="button" class="btn-secondary" onclick={onClose}>{t('common.close')}</button>

@@ -161,6 +161,10 @@ Em **Autoridades certificadoras**, uma intermediária revogada cuja chave o pain
 
 A chave de uma Root é outro caso: veja [Mantendo a Root offline](03-offline-root_pt-BR.md).
 
+## Se uma chave vazar
+
+Revogar é o primeiro passo, não a resposta inteira. Para a ordem dos passos (publicar a CRL da Root, destruir a chave, criar um substituto com restrição, reimplantar, e o que fazer nos clientes que nunca conferem revogação), veja [Protegendo a sua PKI](07-security-guidance_pt-BR.md#se-a-chave-de-uma-intermediária-vazar).
+
 ## Limites
 
 - **Ainda sem OCSP.** Somente CRL.

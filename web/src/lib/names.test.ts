@@ -50,8 +50,8 @@ describe('trust instructions', () => {
         const cmd = trustCommands(os, name);
         const benign = trustCommands(os, 'benign');
         if (cmd === null || benign === null) continue;
-        // Only the file name may differ from a command built for a harmless name.
-        expect(cmd.replaceAll(`${safeStem(name)}.crt`, 'FILE'), `${os} / ${name}`).toBe(benign.replaceAll('benign.crt', 'FILE'));
+        // Only the name (the file name, and the Java alias) may differ from a command built for a harmless name.
+        expect(cmd, `${os} / ${name}`).toBe(benign.replaceAll('benign', safeStem(name)));
       }
     }
   });
@@ -63,6 +63,23 @@ describe('trust instructions', () => {
     expect(trustCommands('macos', 'Lab Root')).toContain('add-trusted-cert');
     expect(trustCommands('windows', 'Lab Root')).toContain('Cert:\\LocalMachine\\Root');
     expect(trustCommands('firefox', 'Lab Root')).toBeNull();
+  });
+
+  it('covers the stores that are not the operating system\'s', () => {
+    const alpine = trustCommands('alpine', 'Lab Root')!;
+    expect(alpine).toContain('apk add --no-cache ca-certificates');
+    expect(alpine).toContain('update-ca-certificates');
+    const java = trustCommands('java', 'Lab Root')!;
+    expect(java).toContain('keytool -importcert -cacerts');
+    expect(java).toContain('-alias lab-root -file lab-root.crt');
+    expect(trustCommands('node', 'Lab Root')).toBe('export NODE_EXTRA_CA_CERTS="$PWD/lab-root.crt"');
+    const py = trustCommands('python', 'Lab Root')!;
+    expect(py).toContain('python3 -m certifi');
+    expect(py).toContain('REQUESTS_CA_BUNDLE');
+    const ctr = trustCommands('containers', 'Lab Root')!;
+    expect(ctr).toContain('apt-get install -y --no-install-recommends ca-certificates');
+    expect(ctr).toContain('COPY lab-root.crt /usr/local/share/ca-certificates/lab-root.crt');
+    expect(ctr).toContain('RUN update-ca-certificates');
   });
 
   it('names download files safely, including wildcard certificates', () => {

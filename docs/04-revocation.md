@@ -161,6 +161,10 @@ In **Certificate authorities**, a revoked intermediate whose key the dashboard s
 
 A Root's key is a different case: see [Keeping the Root offline](03-offline-root.md).
 
+## If a key leaks
+
+Revoking is the first step, not the whole answer. For the order of steps (publish the Root's CRL, destroy the key, make a constrained replacement, redeploy, and what to do on clients that never check revocation), see [Protecting your PKI](07-security-guidance.md#if-an-intermediates-key-leaks).
+
 ## Limits
 
 - **No OCSP yet.** CRL only.

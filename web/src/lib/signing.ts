@@ -39,7 +39,7 @@ export function parseDomains(text: string): { domains: string[]; invalid: string
 }
 
 const DAY = 24 * 60 * 60 * 1000;
-export const DEFAULT_SIGNING_DAYS = 1825; // five years
+export const DEFAULT_SIGNING_DAYS = 730; // two years: a shorter life limits how long a leaked key stays useful
 
 /**
  * How many days an intermediate may be valid for: the default, but never past
