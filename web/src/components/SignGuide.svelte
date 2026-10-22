@@ -3,6 +3,7 @@
   import { t } from '../lib/i18n.svelte';
   import { session } from '../lib/session.svelte';
   import { maxSigningDays, parseDomains, rootPointers, signers, signingGuide, type Signer } from '../lib/signing';
+  import Alert from './Alert.svelte';
   import CodeBlock from './CodeBlock.svelte';
 
   let { requestName, rootNotAfter, rootId }: { requestName: string; rootNotAfter: string; rootId: string } = $props();
@@ -43,8 +44,11 @@
 
   <div>
     <label class="label" for="sign-domains">{t('sign.domains')}</label>
-    <textarea id="sign-domains" class="input font-mono" rows="2" placeholder="lab, mattegroup.example" bind:value={domainText} aria-describedby="sign-domains-hint"></textarea>
+    <textarea id="sign-domains" class="input font-mono" rows="2" placeholder="lab, home.arpa, mattegroup.example" bind:value={domainText} aria-describedby="sign-domains-hint"></textarea>
     <p class="hint" id="sign-domains-hint">{t('sign.domainsHint')}</p>
+    {#if !domainText.trim()}
+      <div class="mt-2"><Alert kind="warning">{t('sign.noDomainsWarn')}</Alert></div>
+    {/if}
     {#if parsed.invalid.length}
       <p class="mt-1 text-sm text-red-700 dark:text-red-400" role="alert">{t('sign.domainsInvalid', { list: parsed.invalid.join(', ') })}</p>
     {/if}

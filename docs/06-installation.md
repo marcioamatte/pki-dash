@@ -133,3 +133,9 @@ On Windows, unzip and run `pki-dash.exe` with the same options. The Linux archiv
 3. The **Release** workflow re-runs the checks, then builds the binaries, archives, packages and image, makes the SBOMs, signs the checksums and the image, pushes the image to `ghcr.io` and creates the GitHub release with all of it and a changelog.
 4. The image package is created **private**. To open it: the repository's *Packages* → `pki-dash` → *Package settings* → *Change visibility*.
 5. Try a snapshot locally with `make snapshot` (needs [GoReleaser](https://goreleaser.com/), version in `.github/workflows/release.yml`, and Docker).
+
+### Keeping the image's list of authorities fresh
+
+The container image carries a list of trusted public authorities, taken from its distroless base image. pki-dash uses it for one thing: connecting to your sign-in provider when that provider's certificate comes from a public CA. The base is pinned by digest, so the list only changes when the pin does, and the packages and binaries do not carry it at all.
+
+Dependabot opens a weekly pull request for the base image. **When you merge one, cut a release**, so the published image gets the new list. If a public authority is distrusted by the major root programs, do not wait for the weekly cycle: bump the base and release.

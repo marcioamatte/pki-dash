@@ -25,7 +25,7 @@ A Root é a âncora de confiança de tudo abaixo dela, então o lugar mais segur
        "profiles": {
          "intermediate": {
            "usages": ["cert sign", "crl sign"],
-           "expiry": "43800h",
+           "expiry": "17520h",
            "ca_constraint": { "is_ca": true, "max_path_len": 0, "max_path_len_zero": true }
          }
        }
@@ -49,7 +49,7 @@ A Root é a âncora de confiança de tudo abaixo dela, então o lugar mais segur
 
    ```bash
    openssl x509 -req -in inter.csr -CA root.crt -CAkey root.key -CAcreateserial \
-     -days 1825 -sha384 -extfile inter.ext -out inter.crt
+     -days 730 -sha384 -extfile inter.ext -out inter.crt
    ```
 
    > **Revogação:** se você quer que os clientes possam checar a intermediária contra a CRL da Root depois, inclua o endereço dela agora (`crl_url` e `issuer_urls` no perfil do cfssl, ou `crlDistributionPoints` e `authorityInfoAccess` nas extensões do openssl). Veja [Revogando uma CA intermediária](04-revocation_pt-BR.md#revogando-uma-ca-intermediária).
@@ -77,13 +77,17 @@ Um certificado só é aceito se tudo isto valer, então um engano (ou um arquivo
 
 Uma importação recusada deixa a requisição no lugar, então você pode corrigir o certificado e tentar de novo, ou cancelar a requisição, o que descarta a chave dela.
 
-## Limitando para quais nomes uma intermediária pode emitir
+## Sempre limite para quais nomes uma intermediária pode emitir
+
+**Faça isso em toda intermediária.** Se a chave dela vazar, uma intermediária sem restrição pode se passar por qualquer nome de host; uma com restrição só pelos seus domínios. O painel avisa quando a lista está vazia, e o [guia de segurança](07-security-guidance_pt-BR.md) explica por que esse é o limite mais útil que você pode definir.
 
 Nas instruções de assinatura você pode listar **domínios** (por exemplo `lab, mattegroup.example`). A receita do openssl então inclui na intermediária uma extensão `nameConstraints` crítica: todo cliente que valida a cadeia rejeita um certificado para qualquer outro nome, mesmo que a chave da intermediária vaze. Um domínio vale para ele mesmo e tudo abaixo dele.
 
 - **Só a receita do openssl consegue.** A linha de comando do cfssl não tem como incluir a extensão; com domínios listados, a aba do cfssl avisa isso em vez de mostrar uma receita que os deixaria de fora em silêncio.
 - O serviço lê as restrições do certificado importado e **recusa emitir** para nomes fora delas (nomes DNS e faixas de IP), em vez de produzir um certificado que nenhum cliente aceitaria.
 - Coloque as restrições na intermediária, não na Root, para limitar uma intermediária sem mexer nas outras.
+- Uma intermediária **criada dentro do pki-dash** sob uma Root que o serviço guarda **não pode** ter restrição (o cfssl não consegue incluir a extensão). As restrições são mais um motivo para manter a Root offline.
+- Só os **nomes DNS** são limitados; os endereços IP não são.
 
 ## Observações
 

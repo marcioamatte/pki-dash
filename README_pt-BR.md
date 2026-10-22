@@ -40,6 +40,7 @@ O servidor se recusa a iniciar sem que você escolha como ele será servido. Na 
 - [Revogação e CRLs](docs/04-revocation_pt-BR.md)
 - [Entrando com Keycloak (OIDC)](docs/05-sso-keycloak_pt-BR.md)
 - [Instalação: pacotes, imagem, binários](docs/06-installation_pt-BR.md)
+- [Protegendo a sua PKI: restrição de nomes, validades, repositórios de confiança, chave vazada](docs/07-security-guidance_pt-BR.md)
 
 ## Contribuindo
 

@@ -133,3 +133,9 @@ No Windows, descompacte e rode `pki-dash.exe` com as mesmas opções. O arquivo 
 3. O workflow **Release** repete as verificações e depois constrói os binários, arquivos, pacotes e a imagem, gera os SBOMs, assina os checksums e a imagem, envia a imagem ao `ghcr.io` e cria o release no GitHub com tudo isso e um changelog.
 4. O pacote da imagem nasce **privado**. Para abri-lo: *Packages* do repositório → `pki-dash` → *Package settings* → *Change visibility*.
 5. Teste um snapshot local com `make snapshot` (precisa do [GoReleaser](https://goreleaser.com/), versão em `.github/workflows/release.yml`, e do Docker).
+
+### Mantendo fresca a lista de autoridades da imagem
+
+A imagem de container traz uma lista de autoridades públicas confiáveis, vinda da sua imagem base distroless. O pki-dash a usa para uma coisa só: conectar ao seu provedor de login quando o certificado dele vem de uma CA pública. A base é fixada por digest, então a lista só muda quando a fixação muda, e os pacotes e binários não a trazem de forma alguma.
+
+O Dependabot abre toda semana um pull request para a imagem base. **Quando você fizer o merge de um, publique uma release**, para que a imagem publicada receba a lista nova. Se uma autoridade pública for descredenciada pelos principais programas de raízes, não espere o ciclo semanal: atualize a base e publique.

@@ -34,7 +34,7 @@
   onDestroy(() => csrFile?.revoke());
 
   const algos: KeyAlgo[] = ['ecdsa-p384', 'ecdsa-p256', 'rsa-3072', 'rsa-4096'];
-  const defaultYears = { root: '10', intermediate: '5' };
+  const defaultYears = { root: '10', intermediate: '2' };
 
   const parent = $derived(roots.find((r) => r.id === parentId));
   // A Root whose key is not here can only get its intermediates signed elsewhere;
@@ -138,6 +138,7 @@
           </label>
         {/if}
         {#if requestMode}<p class="hint">{t('request.hint')}</p>{/if}
+        {#if !requestMode}<Alert kind="warning">{t('cas.form.noConstraints')}</Alert>{/if}
       {/if}
 
       <Field id="ca-name" label={t('cas.form.name')} bind:value={name} />

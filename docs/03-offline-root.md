@@ -25,7 +25,7 @@ The Root is the anchor of trust for everything below it, so the safest place for
        "profiles": {
          "intermediate": {
            "usages": ["cert sign", "crl sign"],
-           "expiry": "43800h",
+           "expiry": "17520h",
            "ca_constraint": { "is_ca": true, "max_path_len": 0, "max_path_len_zero": true }
          }
        }
@@ -49,7 +49,7 @@ The Root is the anchor of trust for everything below it, so the safest place for
 
    ```bash
    openssl x509 -req -in inter.csr -CA root.crt -CAkey root.key -CAcreateserial \
-     -days 1825 -sha384 -extfile inter.ext -out inter.crt
+     -days 730 -sha384 -extfile inter.ext -out inter.crt
    ```
 
    > **Revocation:** if you want clients to be able to check the intermediate against the Root's CRL later, add its address now (`crl_url` and `issuer_urls` in the cfssl profile, or `crlDistributionPoints` and `authorityInfoAccess` in the openssl extensions). See [Revoking an intermediate CA](04-revocation.md#revoking-an-intermediate-ca).
@@ -77,13 +77,17 @@ A certificate is accepted only if all of this holds, so a mistake (or a tampered
 
 A refused import leaves the request in place, so you can fix the certificate and try again, or cancel the request, which discards its key.
 
-## Limiting which names an intermediate may issue for
+## Always limit which names an intermediate may issue for
+
+**Do this for every intermediate.** If its key ever leaks, an unconstrained intermediate can impersonate any host name; a constrained one can impersonate only your domains. The dashboard warns when the list is empty, and the [security guidance](07-security-guidance.md) explains why this is the single most useful limit you can set.
 
 On the signing instructions you can list **domains** (for example `lab, mattegroup.example`). The openssl recipe then adds a critical `nameConstraints` extension to the intermediate: every client that validates the chain rejects a certificate for any other name, even if the intermediate's key leaks. A domain covers itself and everything below it.
 
 - **Only the openssl recipe can do it.** cfssl's command line has no way to add the extension, so with domains listed the cfssl tab says so instead of showing a recipe that would silently leave them out.
 - The service reads the constraints from the imported certificate and **refuses to issue** for names outside them (DNS names and IP ranges), instead of producing a certificate that no client would accept.
 - Put the constraints on the intermediate, not the Root, so one intermediate can be limited without touching the others.
+- An intermediate **created inside pki-dash** under a Root the service holds **cannot** be constrained (cfssl cannot add the extension). Constraints are one more reason to keep the Root offline.
+- Only **DNS names** are limited; IP addresses are not.
 
 ## Notes
 

@@ -40,6 +40,7 @@ The server refuses to start unless you choose how it is served. On first run it 
 - [Revocation and CRLs](docs/04-revocation.md)
 - [Signing in with Keycloak (OIDC)](docs/05-sso-keycloak.md)
 - [Installing: packages, image, binaries](docs/06-installation.md)
+- [Protecting your PKI: name constraints, lifetimes, trust stores, a leaked key](docs/07-security-guidance.md)
 
 ## Contributing
 
