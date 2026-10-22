@@ -52,6 +52,28 @@ Mantenha uma lista curta de **onde você instalou a sua Root**: hosts, imagens, 
 
 Os navegadores, em geral, não buscam CRLs de CAs privadas, e muito outro software também não. A revogação compensa onde algo que *você controla* a confere (veja [Revogação](04-revocation_pt-BR.md#quem-de-fato-consulta-uma-crl)). Para o resto, os controles são os acima: nomes limitados, vidas curtas e substituir o que foi comprometido.
 
+## 5. Limite quem alcança a Root offline e registre cada assinatura
+
+A Root é o segredo mais valioso de toda a PKI, e o único que o pki-dash não consegue proteger por você, porque ela **não está aqui**: vive numa máquina ou num meio que você mantém offline. O que segue é boa prática geral que você mesmo executa; o pki-dash não impõe nada disso.
+
+- **Mantenha o círculo pequeno.** Todo mundo que alcança a chave da Root *ou* a senha dela é mais um caminho para o vazamento. Num homelab pode ser só você. Numa equipe, nomeie as poucas pessoas, anote os nomes e retire o acesso no dia em que alguém sair.
+- **Não guarde a chave e a senha juntas.** A chave fica em mídia offline cifrada; a senha fica em outro lugar, e um backup da chave nunca fica ao lado dela.
+- **Onde há mais de uma pessoa, use dois passos.** Uma pede a assinatura e outra a executa, ou ao menos espere um dia antes de assinar qualquer coisa inesperada.
+- **Mantenha offline de verdade.** Uma máquina ou um meio de boot sem rede, usado para isso e nada mais, guardado trancado. Não assine "só desta vez" no seu notebook do dia a dia.
+- **Registre cada assinatura.** O log de auditoria do painel registra o que acontece *no painel* (importar uma intermediária assinada, revogar, publicar uma CRL). A assinatura em si acontece na máquina offline e não deixa rastro ali, então mantenha um registro curto seu, num caderno ou num arquivo de texto guardado com a Root:
+
+```
+data        : 2026-10-22
+quem        : quem assinou / quem pediu
+por quê     : nova intermediária do laboratório (substitui "Home Services 2024")
+o que       : CN=Home Services 2026, serial, 2 anos, path length 0,
+              restrição de nomes: lab, home.arpa
+conferido   : certificado relido com o openssl antes de sair da máquina
+```
+
+- **Leia o que você assinou antes de sair da máquina da Root.** Mostre com `openssl x509 -in inter.crt -noout -text` e confirme o assunto esperado, o path length 0, as restrições de nomes que você pretendia e uma validade que termina antes da Root. Ao importar, o painel confere o path length, o uso da chave, a validade e que ele corresponde à requisição, mas **não** exige restrição de nomes: essa parte é sua para olhar.
+- **Teste o caminho de volta.** Uma vez, restaure a Root a partir do backup numa máquina offline, assine um certificado descartável e apague-o, para saber que o backup e a senha realmente funcionam. Mantenha ao menos duas cópias cifradas em lugares diferentes. Uma Root que você não consegue restaurar não tem backup.
+
 ## Se a chave de uma intermediária vazar
 
 Aja nesta ordem. A rapidez importa mais que a perfeição.
@@ -63,7 +85,7 @@ Aja nesta ordem. A rapidez importa mais que a perfeição.
 5. **Retire a confiança na intermediária antiga onde os clientes não conferem CRL.** Não há um jeito único: no Windows, `certutil -addstore Disallowed intermediaria-antiga.crt` como administrador; no macOS, marque o certificado como *Never Trust* no Acesso às Chaves; no Linux não há um modo limpo, para todo o sistema, de desconfiar de uma intermediária confiando na Root dela. Se você não consegue cobrir todos os clientes e a exposição importa, a resposta honesta é **trocar a Root** e reinstalar a confiança em todo lugar.
 6. **Não presuma que você consegue ver o que foi emitido.** O log de auditoria lista o que o pki-dash emitiu, não o que alguém com a chave roubada emitiu em outro lugar. CAs privadas não têm um log público. Por isso limitar nomes e validades de antemão importa.
 
-Se a chave da **Root** vazar, nada além de trocar a Root e reinstalar a confiança em todo lugar basta. Mantenha-a offline, cifrada e com backup longe da senha dela.
+Se a chave da **Root** vazar, nada além de trocar a Root e reinstalar a confiança em todo lugar basta. Mantenha-a offline, cifrada e com backup longe da senha dela, como na [seção 5](#5-limite-quem-alcança-a-root-offline-e-registre-cada-assinatura).
 
 ## Chaves que vêm de fora
 

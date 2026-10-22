@@ -89,6 +89,10 @@ On the signing instructions you can list **domains** (for example `lab, mattegro
 - An intermediate **created inside pki-dash** under a Root the service holds **cannot** be constrained (cfssl cannot add the extension). Constraints are one more reason to keep the Root offline.
 - Only **DNS names** are limited; IP addresses are not.
 
+## Who can reach the Root
+
+The Root's machine, its key and its passphrase are the most valuable things in your PKI, and everything above happens outside the dashboard. Keep the circle of people who can reach them small, keep the key and the passphrase apart, and **log every signing** yourself: see [Protecting your PKI, section 5](07-security-guidance.md#5-limit-who-can-reach-the-offline-root-and-log-every-signing).
+
 ## Notes
 
 - The Root's validity must outlast the intermediate's. Choose `-days` / `expiry` accordingly.

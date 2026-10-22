@@ -89,6 +89,10 @@ Nas instruções de assinatura você pode listar **domínios** (por exemplo `lab
 - Uma intermediária **criada dentro do pki-dash** sob uma Root que o serviço guarda **não pode** ter restrição (o cfssl não consegue incluir a extensão). As restrições são mais um motivo para manter a Root offline.
 - Só os **nomes DNS** são limitados; os endereços IP não são.
 
+## Quem alcança a Root
+
+A máquina da Root, a chave e a senha dela são o que há de mais valioso na sua PKI, e tudo o que está acima acontece fora do painel. Mantenha pequeno o círculo de pessoas que as alcançam, mantenha a chave e a senha separadas e **registre você mesmo cada assinatura**: veja [Protegendo a sua PKI, seção 5](07-security-guidance_pt-BR.md#5-limite-quem-alcança-a-root-offline-e-registre-cada-assinatura).
+
 ## Observações
 
 - A validade da Root precisa ultrapassar a da intermediária. Escolha `-days` / `expiry` de acordo.

@@ -52,6 +52,28 @@ Keep a short list of **where you installed your Root**: hosts, images, CI runner
 
 Web browsers mostly do not fetch CRLs for private CAs, and a lot of other software never does. Revocation pays off where something *you control* checks it (see [Revocation](04-revocation.md#who-actually-checks-a-crl)). For everything else, the controls are the ones above: limited names, short lives, and replacing what is compromised.
 
+## 5. Limit who can reach the offline Root, and log every signing
+
+The Root is the most valuable secret in the whole PKI, and the one pki-dash cannot protect for you, because it is **not here**: it lives on a machine or a medium you keep offline. What follows is general good practice that you carry out yourself; pki-dash does not enforce any of it.
+
+- **Keep the circle small.** Everyone who can reach the Root's key *or* its passphrase is one more way for it to leak. In a homelab that may be only you. In a team, name the few people and write the names down, and remove access the day someone leaves.
+- **Do not keep the key and its passphrase together.** The key lives on encrypted offline media; the passphrase is stored somewhere else, and a backup of the key never sits next to it.
+- **Where there is more than one person, use two steps.** One asks for a signing and another carries it out, or at least wait a day before signing anything unexpected.
+- **Keep it offline for real.** A machine or boot medium with no network, used for this and nothing else, and stored locked. Do not sign "just this once" from your everyday laptop.
+- **Log every signing.** The dashboard's audit log records what happens *in the dashboard* (importing a signed intermediate, revoking, publishing a CRL). The signing itself happens on the offline machine and leaves no trace there, so keep a short log of your own, in a notebook or a text file kept with the Root:
+
+```
+date        : 2026-10-22
+who         : who signed / who asked
+why         : new intermediate for the lab (replaces "Home Services 2024")
+what signed : CN=Home Services 2026, serial, 2 years, path length 0,
+              name constraints: lab, home.arpa
+checked     : certificate read back with openssl before it left the machine
+```
+
+- **Read what you signed before it leaves the Root's machine.** Show it with `openssl x509 -in inter.crt -noout -text` and confirm the subject you expected, path length 0, the name constraints you meant, and a validity that ends before the Root's. When you import it, the dashboard checks the path length, the key usage, the validity and that it matches the request, but it does **not** require name constraints: that part is yours to look at.
+- **Test the way back.** Once, restore the Root from its backup on an offline machine, sign a throwaway certificate and delete it, so you know the backup and the passphrase really work. Keep at least two encrypted copies in different places. A Root you cannot restore is not backed up.
+
 ## If an intermediate's key leaks
 
 Act in this order. Speed matters more than perfection.
@@ -63,7 +85,7 @@ Act in this order. Speed matters more than perfection.
 5. **Remove trust in the old intermediate where clients do not check CRLs.** There is no one way: on Windows, `certutil -addstore Disallowed old-intermediate.crt` as administrator; on macOS, set the certificate to *Never Trust* in Keychain Access; on Linux there is no clean system-wide way to distrust one intermediate while trusting its Root. If you cannot cover every client and the exposure matters, the honest answer is to **replace the Root** and reinstall trust everywhere.
 6. **Do not assume you can see what was issued.** The audit log lists what pki-dash issued, not what someone with the stolen key issued elsewhere. Private CAs have no public log. That is why limiting names and lifetimes in advance matters.
 
-If the **Root's** key leaks, nothing short of replacing the Root and reinstalling trust everywhere is enough. Keep it offline, encrypted, and backed up away from its passphrase.
+If the **Root's** key leaks, nothing short of replacing the Root and reinstalling trust everywhere is enough. Keep it offline, encrypted, and backed up away from its passphrase, as in [section 5](#5-limit-who-can-reach-the-offline-root-and-log-every-signing).
 
 ## Keys that come from outside
 
