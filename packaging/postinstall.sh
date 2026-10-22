@@ -28,6 +28,8 @@ pki-dash is installed but not started. Next:
   1. Edit /etc/pki-dash/pki-dash.env and choose how it is served (a TLS certificate, as a rule).
   2. sudo systemctl enable --now pki-dash
   3. sudo journalctl -u pki-dash | grep setup_token      (first run only: the one-time setup token)
+If it does not start: sudo journalctl -u pki-dash -n 20 --no-pager. After fixing the settings,
+run  sudo systemctl reset-failed pki-dash && sudo systemctl restart pki-dash
 Optional sign-in with Keycloak: see /etc/pki-dash/oidc.env.example.
 Documentation: /usr/share/doc/pki-dash/
 

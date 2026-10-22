@@ -92,15 +92,10 @@ func run(ctx context.Context, args []string) error {
 	log.Info("starting", "version", version)
 
 	// Refuse to guess about transport security: the operator must choose.
-	modes := 0
-	for _, on := range []bool{*certFile != "" || *keyFile != "", *selfSigned, *insecure} {
-		if on {
-			modes++
-		}
+	if err := checkServingMode(*certFile, *keyFile, *selfSigned, *insecure); err != nil {
+		return err
 	}
 	switch {
-	case modes != 1:
-		return errors.New("choose exactly one of: -tls-cert with -tls-key, -tls-self-signed, or -insecure-http")
 	case (*certFile == "") != (*keyFile == ""):
 		return errors.New("-tls-cert and -tls-key must be given together")
 	}
@@ -269,6 +264,30 @@ func run(ctx context.Context, args []string) error {
 		_ = pubSrv.Shutdown(shutdown)
 	}
 	return httpSrv.Shutdown(shutdown)
+}
+
+// checkServingMode insists on exactly one way of serving, and says which ones
+// are set when it is not one, because "none" and "two" need different fixes
+// (and a settings file is easy to leave with a second one switched on).
+func checkServingMode(certFile, keyFile string, selfSigned, insecure bool) error {
+	var set []string
+	if certFile != "" || keyFile != "" {
+		set = append(set, "your certificate (-tls-cert/-tls-key, PKI_DASH_TLS_CERT/PKI_DASH_TLS_KEY)")
+	}
+	if selfSigned {
+		set = append(set, "a self-signed certificate (-tls-self-signed, PKI_DASH_TLS_SELF_SIGNED)")
+	}
+	if insecure {
+		set = append(set, "plain HTTP (-insecure-http, PKI_DASH_INSECURE_HTTP)")
+	}
+	const options = "your certificate (-tls-cert with -tls-key), a self-signed certificate (-tls-self-signed), or plain HTTP behind a proxy (-insecure-http)"
+	switch len(set) {
+	case 1:
+		return nil
+	case 0:
+		return errors.New("none of the ways of serving is set: choose exactly one of " + options)
+	}
+	return fmt.Errorf("%d ways of serving are set at once: %s. Keep exactly one and remove or comment out the others", len(set), strings.Join(set, "; "))
 }
 
 // oidcFlags are the settings for signing in through an identity provider.
