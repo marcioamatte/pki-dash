@@ -70,7 +70,11 @@ O serviço fica **instalado mas não iniciado**: o servidor se recusa a rodar at
 3. `sudo journalctl -u pki-dash | grep setup_token`: o token de uso único da primeira execução.
 4. Abra o endereço no navegador, informe o token e crie o primeiro administrador e a senha mestra.
 
-Se você deixar o passo 1 por fazer, o serviço para depois de algumas tentativas e o journal diz o que falta (`sudo journalctl -u pki-dash`).
+Se você deixar o passo 1 por fazer, ou ligar **duas** das três formas ao mesmo tempo, o serviço para depois de algumas tentativas e o journal diz qual dos casos é: `sudo journalctl -u pki-dash -n 20 --no-pager`. Depois de corrigir o arquivo, limpe a falha antes de reiniciar, porque o systemd se recusa a iniciar uma unit que acabou de falhar várias vezes até você fazer isso:
+
+```bash
+sudo systemctl reset-failed pki-dash && sudo systemctl restart pki-dash
+```
 
 ### Configurações que você pode querer
 

@@ -5,7 +5,9 @@ After=network-online.target
 Wants=network-online.target
 # A configuration mistake makes the server exit at once. Retry a few times
 # (the provider or the network may just be late), then stop and wait to be fixed
-# instead of restarting forever.
+# instead of restarting forever. After fixing the settings, run
+#   systemctl reset-failed pki-dash && systemctl restart pki-dash
+# because systemd will not start a unit that has just hit this limit until it is reset.
 StartLimitIntervalSec=300
 StartLimitBurst=5
 

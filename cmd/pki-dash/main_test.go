@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,5 +60,51 @@ func TestProbeWildcardAddressUsesLoopback(t *testing.T) {
 		if err := probe(listen); err != nil {
 			t.Errorf("%s: %v", listen, err)
 		}
+	}
+}
+
+func TestCheckServingMode(t *testing.T) {
+	for name, tc := range map[string]struct {
+		cert, key         string
+		self, plain       bool
+		wantErr, mentions []string
+	}{
+		"certificate only":   {cert: "c", key: "k"},
+		"self-signed only":   {self: true},
+		"plain only":         {plain: true},
+		"none":               {wantErr: []string{"none of the ways"}},
+		"certificate + self": {cert: "c", key: "k", self: true, wantErr: []string{"2 ways", "-tls-cert/-tls-key", "-tls-self-signed", "PKI_DASH_TLS_SELF_SIGNED"}},
+		"self + plain":       {self: true, plain: true, wantErr: []string{"2 ways", "-tls-self-signed", "-insecure-http"}},
+		"all three":          {cert: "c", key: "k", self: true, plain: true, wantErr: []string{"3 ways", "-tls-cert/-tls-key", "-tls-self-signed", "-insecure-http"}},
+		"only a cert path":   {cert: "c"},
+	} {
+		err := checkServingMode(tc.cert, tc.key, tc.self, tc.plain)
+		if len(tc.wantErr) == 0 {
+			if err != nil {
+				t.Errorf("%s: unexpected error %v", name, err)
+			}
+			continue
+		}
+		if err == nil {
+			t.Errorf("%s: want an error", name)
+			continue
+		}
+		for _, w := range tc.wantErr {
+			if !strings.Contains(err.Error(), w) {
+				t.Errorf("%s: %q does not mention %q", name, err, w)
+			}
+		}
+	}
+}
+
+func TestRunRefusesTwoWaysOfServingFromTheEnvironment(t *testing.T) {
+	// The situation of a settings file with the certificate lines and the
+	// self-signed line all switched on.
+	t.Setenv("PKI_DASH_TLS_CERT", "/etc/pki-dash/tls.crt")
+	t.Setenv("PKI_DASH_TLS_KEY", "/etc/pki-dash/tls.key")
+	t.Setenv("PKI_DASH_TLS_SELF_SIGNED", "true")
+	err := run(context.Background(), []string{"-data-dir", t.TempDir()})
+	if err == nil || !strings.Contains(err.Error(), "2 ways of serving are set at once") {
+		t.Fatalf("got %v", err)
 	}
 }

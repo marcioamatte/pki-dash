@@ -70,7 +70,11 @@ The service is **installed but not started**: the server refuses to run until yo
 3. `sudo journalctl -u pki-dash | grep setup_token`: the one-time token for the first run.
 4. Open the address in a browser, enter the token and create the first administrator and the master passphrase.
 
-If you leave step 1 undone, the service stops after a few attempts and the journal says what is missing (`sudo journalctl -u pki-dash`).
+If you leave step 1 undone, or switch **two** of the three on at once, the service stops after a few attempts and the journal says which case it is: `sudo journalctl -u pki-dash -n 20 --no-pager`. After fixing the file, clear the failure before restarting, because systemd refuses to start a unit that has just failed several times until you do:
+
+```bash
+sudo systemctl reset-failed pki-dash && sudo systemctl restart pki-dash
+```
 
 ### Settings you may want
 
