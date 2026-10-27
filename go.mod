@@ -8,17 +8,17 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.4
 	golang.org/x/crypto v0.58.0
 	golang.org/x/oauth2 v0.37.0
-	modernc.org/sqlite v1.60.1
+	modernc.org/sqlite v1.61.0
 )
 
 require (
-	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/google/certificate-transparency-go v1.1.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
-	github.com/ncruces/go-strftime v1.0.0 // indirect
+	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.9.3 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/weppos/publicsuffix-go v0.30.0 // indirect
@@ -29,7 +29,7 @@ require (
 	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
-	modernc.org/libc v1.77.1 // indirect
+	modernc.org/libc v1.79.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
