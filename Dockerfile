@@ -7,7 +7,7 @@
 # proposes updates, so they are reviewed rather than floating.
 
 # ---- 1. build the web UI ----------------------------------------------------
-FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS ui
+FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS ui
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json web/.npmrc ./
 RUN npm ci
