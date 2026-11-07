@@ -270,7 +270,7 @@ SOFTWARE.
 
 ---
 
-## github.com/go-jose/go-jose/v4 v4.1.4
+## github.com/go-jose/go-jose/v4 v4.1.7
 
 
                                  Apache License
