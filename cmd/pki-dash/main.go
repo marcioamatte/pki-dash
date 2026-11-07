@@ -99,6 +99,30 @@ func run(ctx context.Context, args []string) error {
 	case (*certFile == "") != (*keyFile == ""):
 		return errors.New("-tls-cert and -tls-key must be given together")
 	}
+	// Read the operator's certificate now, before anything is announced or the
+	// database is touched, so a file the service cannot read stops it here, clearly.
+	var operatorCert tls.Certificate
+	if *certFile != "" {
+		c, err := loadTLSKeyPair(*certFile, *keyFile)
+		if err != nil {
+			return err
+		}
+		operatorCert = c
+	}
+	// Open the sockets now too, so an address the server cannot use stops it before
+	// it announces anything or prints a setup token that could never be used.
+	ln, err := listenOn(*listen)
+	if err != nil {
+		return err
+	}
+	defer ln.Close()
+	var pubLn net.Listener
+	if *pkiListen != "" {
+		if pubLn, err = listenOn(*pkiListen); err != nil {
+			return err
+		}
+		defer pubLn.Close()
+	}
 
 	trusted, err := api.ParseTrustedProxies(*proxies)
 	if err != nil {
@@ -222,7 +246,7 @@ func run(ctx context.Context, args []string) error {
 		}
 		go func() {
 			log.Info("serving the public PKI listener (plain HTTP, read-only)", "addr", *pkiListen, "public_url", base)
-			if err := pubSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := pubSrv.Serve(pubLn); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				errc <- err
 			}
 		}()
@@ -236,7 +260,7 @@ func run(ctx context.Context, args []string) error {
 			} else {
 				log.Warn("serving plain HTTP: do not expose this port beyond a trusted network", "addr", *listen)
 			}
-			errc <- httpSrv.ListenAndServe()
+			errc <- httpSrv.Serve(ln)
 		case *selfSigned:
 			cert, fp, err := selfSignedCert()
 			if err != nil {
@@ -245,10 +269,11 @@ func run(ctx context.Context, args []string) error {
 			}
 			httpSrv.TLSConfig.Certificates = []tls.Certificate{cert}
 			log.Warn("serving TLS with a throwaway self-signed certificate", "addr", *listen, "sha256", fp)
-			errc <- httpSrv.ListenAndServeTLS("", "")
+			errc <- httpSrv.ServeTLS(ln, "", "")
 		default:
+			httpSrv.TLSConfig.Certificates = []tls.Certificate{operatorCert}
 			log.Info("serving TLS", "addr", *listen)
-			errc <- httpSrv.ListenAndServeTLS(*certFile, *keyFile)
+			errc <- httpSrv.ServeTLS(ln, "", "")
 		}
 	}()
 

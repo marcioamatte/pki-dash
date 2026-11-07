@@ -76,14 +76,58 @@ Se você deixar o passo 1 por fazer, ou ligar **duas** das três formas ao mesmo
 sudo systemctl reset-failed pki-dash && sudo systemctl restart pki-dash
 ```
 
+### Quando não inicia
+
+`sudo journalctl -u pki-dash -n 20 --no-pager` diz o motivo. O servidor agora confere as configurações antes de anunciar qualquer coisa, e as mensagens dizem o que fazer:
+
+| O log diz | Causa | Correção |
+|---|---|---|
+| `none of the ways of serving is set` | nenhuma das três formas está ligada | descomente exatamente uma no `pki-dash.env` |
+| `N ways of serving are set at once` | duas ou três estão ligadas | mantenha uma e comente as outras |
+| `cannot read the TLS certificate or key … permission denied` | o serviço roda como o usuário `pki-dash`, e o arquivo só é legível pelo root (comum quando foi copiado de uma pasta pessoal) | `sudo chgrp pki-dash /etc/pki-dash /etc/pki-dash/tls.crt /etc/pki-dash/tls.key && sudo chmod 750 /etc/pki-dash && sudo chmod 644 /etc/pki-dash/tls.crt && sudo chmod 640 /etc/pki-dash/tls.key` |
+| `a TLS file does not exist` | caminho errado nas configurações | corrija `PKI_DASH_TLS_CERT` / `PKI_DASH_TLS_KEY` |
+| `the TLS certificate and key cannot be used` | não são arquivos PEM, ou a chave não é a do certificado | confira os dois com `openssl x509 -in tls.crt -noout -subject` e `openssl pkey -in tls.key -noout` |
+| `cannot listen on …:443 … permission denied` | portas abaixo de 1024 exigem uma capability que o serviço não tem | veja *Usando a porta 443* abaixo, ou use 8443 ou maior |
+| `cannot listen on … address already in use` | outro programa usa esse endereço e porta | escolha outro, ou pare esse programa |
+
+Depois de corrigir qualquer coisa, limpe a falha antes de reiniciar, porque o systemd para de tentar depois de algumas tentativas:
+
+```bash
+sudo systemctl reset-failed pki-dash && sudo systemctl restart pki-dash
+```
+
 ### Configurações que você pode querer
 
 Todas em `/etc/pki-dash/pki-dash.env`, depois `sudo systemctl restart pki-dash`:
 
-- `PKI_DASH_LISTEN`: o endereço em que escutar (padrão `127.0.0.1:8443`, só esta máquina). Use o endereço do servidor para deixar outros entrarem. Abaixo da porta 1024 o serviço precisa de uma capability: veja o comentário no arquivo da unit.
+- `PKI_DASH_LISTEN`: o endereço em que escutar (padrão `127.0.0.1:8443`, só esta máquina). Use o endereço do servidor para deixar outros entrarem. Para usar uma porta abaixo de 1024, como a 443, veja *Usando a porta 443* abaixo.
 - Atrás de um proxy: `PKI_DASH_TRUSTED_PROXIES`, veja [Implantação](02-deployment_pt-BR.md).
 - Publicar CRLs: `PKI_DASH_PKI_LISTEN` e `PKI_DASH_PUBLIC_URL`, veja [Revogação](04-revocation_pt-BR.md).
 - Todas as outras opções, e suas variáveis, estão em [Implantação](02-deployment_pt-BR.md).
+
+### Usando a porta 443 (ou outra abaixo de 1024)
+
+O serviço roda sem nenhuma capability, de propósito, então não consegue abrir portas abaixo de 1024. Para dar a ele essa única capability e mais nada, crie um drop-in (uma atualização do pacote não mexe nele):
+
+```bash
+sudo systemctl edit pki-dash
+```
+
+e no editor escreva:
+
+```ini
+[Service]
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+```
+
+Salve, ajuste `PKI_DASH_LISTEN` para o endereço com `:443` no `pki-dash.env` e depois:
+
+```bash
+sudo systemctl reset-failed pki-dash && sudo systemctl restart pki-dash
+```
+
+`systemctl show pki-dash -p AmbientCapabilities -p CapabilityBoundingSet` deve mostrar `cap_net_bind_service` nas duas. Uma alternativa que dispensa a capability é manter a 8443 e encaminhar a 443 para ela pelo firewall, ou colocar um proxy reverso na frente.
 
 ### Entrando com o Keycloak (opcional)
 
