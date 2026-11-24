@@ -3,7 +3,7 @@ module github.com/marcioamatte/pki-dash
 go 1.27.3
 
 require (
-	github.com/cloudflare/cfssl v1.7.1
+	github.com/cloudflare/cfssl v1.7.2
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/go-jose/go-jose/v4 v4.1.7
 	golang.org/x/crypto v0.58.0

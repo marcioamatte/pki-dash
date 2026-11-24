@@ -1,5 +1,5 @@
-github.com/cloudflare/cfssl v1.7.1 h1:nMC84ouypIM/AXrrY24ql70cEtkelfxq4NZ67Ur8pG8=
-github.com/cloudflare/cfssl v1.7.1/go.mod h1:WLpD4XaYgn44qgQ4W+tvGJEr59/snfQn6LwUrXloxx0=
+github.com/cloudflare/cfssl v1.7.2 h1:uq6FyvM7+QHcgxzqMG8onMDKdPMsgTBBsUBqsIAIzEA=
+github.com/cloudflare/cfssl v1.7.2/go.mod h1:WLpD4XaYgn44qgQ4W+tvGJEr59/snfQn6LwUrXloxx0=
 github.com/coreos/go-oidc/v3 v3.21.0 h1:wZo4Q9Pum8dYEj0eMUPrqR+kvuGkeUplbLpNCkBqoWM=
 github.com/coreos/go-oidc/v3 v3.21.0/go.mod h1:DYCf24+ncYi+XkIH97GY1+dqoRlbaSI26KVTCI9SrY4=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
